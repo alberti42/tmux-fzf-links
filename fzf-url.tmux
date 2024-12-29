@@ -1,23 +1,32 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 #===============================================================================
 #   Author: Wenxuan
 #    Email: wenxuangm@gmail.com
 #  Created: 2018-04-06 09:30
 #===============================================================================
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+# To ensure safe execution on all zsh systems
+emulate -LR zsh
+
+0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
+0="${${(M)0:#/*}:-$PWD/$0}"
+
+SCRIPT_DIR="${0:h}"
 
 # $1: option
 # $2: default value
 tmux_get() {
     local value
-    value="$(tmux show -gqv "$1")"
-    [ -n "$value" ] && echo "$value" || echo "$2"
+    value=$(tmux show -gqv "$1")
+    [[ -n "$value" ]] && echo "$value" || echo "$2"
 }
 
-key="$(tmux_get '@fzf-url-bind' 'u')"
-history_limit="$(tmux_get '@fzf-url-history-limit' 'screen')"
-extra_filter="$(tmux_get '@fzf-url-extra-filter' '')"
-custom_open="$(tmux_get '@fzf-url-open' '')"
-echo "$extra_filter" > /tmp/filter
+key=$(tmux_get '@fzf-url-bind' 'o')
+history_limit=$(tmux_get '@fzf-url-history-limit' 'screen')
+extra_filter=$(tmux_get '@fzf-url-extra-filter' '')
+custom_open=$(tmux_get '@fzf-url-open' '')
+fzf_options=$(tmux_get '@fzf-url-fzf-options')
+extra_path=$(tmux_get '@fzf-url-extra-path' '')
 
-tmux bind-key "$key" run -b "$SCRIPT_DIR/fzf-url.sh '$extra_filter' $history_limit '$custom_open'";
+# Ensure parameters are safely passed, even if they are empty strings
+tmux bind-key "$key" run-shell -b "$SCRIPT_DIR/fzf-url.zsh '$extra_filter' '$history_limit' '$custom_open' '$fzf_options' '$extra_path'"
