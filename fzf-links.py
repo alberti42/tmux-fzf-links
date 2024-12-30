@@ -23,7 +23,6 @@ def run_fzf(fzf_options:str,choices:list[str]):
     default_options = "-w 100% -h 50% --multi -0 --no-preview"
     options = fzf_options or default_options
     cmd = f"fzf-tmux {options}"
-    print(cmd)
     return subprocess.run(cmd, input="\n".join(choices), shell=True, text=True, capture_output=True).stdout
 
 def open_link(link:str, custom_open_cmd:str):
@@ -126,20 +125,20 @@ def main(extra_filter:str='', history_limit:str="screen", custom_open_cmd:str=''
             link = match.group("link")
 
             if not (isinstance(idx,str) and isinstance(scheme_type,str) and isinstance(link,str)):
-                print(f"tmux-fzf-links: malformed selection: {selected_item}", file=sys.stderr)
+                _ = subprocess.run(f"tmux display 'tmux-fzf-url-links: malformed selection: {selected_item}'", shell=True)
                 return
 
             post_handler = schemes[scheme_type]["post_handler"]
 
             if post_handler is None:
-                print(f"tmux-fzf-links: malformed selection: {selected_item}", file=sys.stderr)
+                _ = subprocess.run(f"tmux display 'tmux-fzf-url-links: malformed selection: {selected_item}'", shell=True)
                 return
 
             post_handled_link = post_handler(link)
 
             open_link(post_handled_link, custom_open_cmd)
         else:
-            print(f"tmux-fzf-links: malformed selection: {selected_item}", file=sys.stderr)
+            _ = subprocess.run(f"tmux display 'tmux-fzf-url-links: malformed selection: {selected_item}'", shell=True)
 
 if __name__ == "__main__":
     try:
