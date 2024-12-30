@@ -12,11 +12,41 @@ import sys
 import shutil
 from typing import Callable,TypedDict
 
-def identity_handler(s:str) -> str:
-    return s
+class PatternNotMatching(Exception):
+    """Raise exception when the pattern does not match a string already matched"""
 
 def git_handler(s:str) -> str:
     return f"https://github.com/{s}"
+
+def error_handlerdler(s:str) -> str:
+    # Handle error messages appearing on the command line
+    # and create an appropriate link to open the affected file 
+
+    match = schemes["ERROR"]["regex"].search(s)
+    if match is None:
+        raise PatternNotMatching('unexpectedtly pattern did not match')
+    
+    file=match.group('file')
+    line=match.group('line')
+
+    if not (isinstance(file,str) and isinstance(line,str)):
+        raise PatternNotMatching('unexpectedtly pattern did not match')
+
+    return "{file}:{line}"
+
+# Define the structure of each scheme entry
+class SchemeEntry(TypedDict):
+    pre_handler:Callable[[str], str] | None  # A function that takes a string and returns a string
+    post_handler: Callable[[str], str] | None  # A function that takes a string and returns a string
+    regex: re.Pattern[str]            # A compiled regex pattern
+
+# Define schemes
+schemes: dict[str, SchemeEntry] = {
+    "URL": {"post_handler": None, "pre_handler": None, "regex": re.compile(r"(?P<link>https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*)")},
+    "IP":  {"post_handler": None, "pre_handler": None, "regex": re.compile(r"(?P<link>[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:[0-9]{1,5})?(/\S+)*)")},
+    "GIT": {"post_handler": git_handler, "pre_handler": None, "regex": re.compile(r"(?P<link>(ssh://)?git@\S*)")},
+    "ERROR": {"post_handler": error_handler, "pre_handler": None, "regex": re.compile(r"(?P<link>File \"(?P<file>...*?)\"\, line (?P<line>[0-9]+))")}
+}
 
 def run_fzf(fzf_options:str,choices:list[str]):
     """Run fzf with the given options."""
@@ -69,20 +99,6 @@ def main(extra_filter:str='', history_limit:str="screen", custom_open_cmd:str=''
     # Remove escape sequences
     content=remove_escape_sequences(content)
 
-
-    # Define the structure of each scheme entry
-    class SchemeEntry(TypedDict):
-        pre_handler:Callable[[str], str] | None  # A function that takes a string and returns a string
-        post_handler: Callable[[str], str] | None  # A function that takes a string and returns a string
-        regex: re.Pattern[str]            # A compiled regex pattern
-
-    # Define schemes
-    schemes: dict[str, SchemeEntry] = {
-        "URL": {"post_handler": identity_handler, "pre_handler": None, "regex": re.compile(r"(?P<link>https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*)")},
-        "IP":  {"post_handler": identity_handler, "pre_handler": None, "regex": re.compile(r"(?P<link>[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:[0-9]{1,5})?(/\S+)*)")},
-        "GIT": {"post_handler": git_handler, "pre_handler": None, "regex": re.compile(r"(?P<link>(ssh://)?git@\S*)")},
-    }
-
     items:set[str] = set()
 
     # Process each scheme
@@ -95,7 +111,7 @@ def main(extra_filter:str='', history_limit:str="screen", custom_open_cmd:str=''
                 if scheme['pre_handler']:
                     matched_text = scheme['pre_handler'](matched_text)
                 items.add(scheme_type + "  " + matched_text)
-
+        
     if not items:
         _ = subprocess.run("tmux display 'tmux-fzf-url-links: no URLs found'", shell=True)
         return
@@ -105,7 +121,7 @@ def main(extra_filter:str='', history_limit:str="screen", custom_open_cmd:str=''
 
     # Number the items
     numbered_choices = [f"{idx:3d}  {item}" for idx, item in enumerate(sorted_choices, 1)]
-
+    
     # Run fzf and get selected items
     selected = run_fzf(fzf_options,numbered_choices)
     if not selected.strip():
