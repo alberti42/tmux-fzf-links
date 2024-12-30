@@ -28,4 +28,4 @@ fzf_options=$(tmux_get '@fzf-url-fzf-options')
 extra_path=$(tmux_get '@fzf-url-extra-path' '')
 
 # Ensure parameters are safely passed, even if they are empty strings
-tmux bind-key "$key" run-shell -b "$SCRIPT_DIR/fzf-url.zsh '$extra_filter' '$history_limit' '$custom_open' '$fzf_options' '$extra_path'"
+tmux bind-key "$key" run-shell -b "python3 $SCRIPT_DIR/fzf-links.py '$extra_filter' '$history_limit' '$custom_open' '$fzf_options' '$extra_path'"
