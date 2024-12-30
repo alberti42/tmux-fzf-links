@@ -20,12 +20,12 @@ tmux_get() {
     [[ -n "$value" ]] && echo "$value" || echo "$2"
 }
 
-key=$(tmux_get '@fzf-url-bind' 'o')
-history_limit=$(tmux_get '@fzf-url-history-limit' 'screen')
-extra_filter=$(tmux_get '@fzf-url-extra-filter' '')
-custom_open=$(tmux_get '@fzf-url-open' '')
-fzf_options=$(tmux_get '@fzf-url-fzf-options')
-extra_path=$(tmux_get '@fzf-url-extra-path' '')
+key=$(tmux_get '@fzf-links-key' 'o')
+history_limit=$(tmux_get '@fzf-links-history-limit' 'screen')
+editor_open_cmd=$(tmux_get '@fzf-links-editor-open-cmd' '')
+browser_open_cmd=$(tmux_get '@fzf-links-browser-open-cmd' '')
+fzf_display_options=$(tmux_get '@fzf-links-fzf-display-options' '-w 100% -h 50% --multi -0 --no-preview')
+path_extension=$(tmux_get '@fzf-links-path-extension' '')
 
 # Ensure parameters are safely passed, even if they are empty strings
-tmux bind-key "$key" run-shell -b "python3 $SCRIPT_DIR/fzf-links.py '$extra_filter' '$history_limit' '$custom_open' '$fzf_options' '$extra_path'"
+tmux bind-key "$key" run-shell -b "python3 $SCRIPT_DIR/fzf-links.py '$history_limit' '$editor_open_cmd' '$browser_open_cmd' $fzf_display_options' '$path_extension'"
