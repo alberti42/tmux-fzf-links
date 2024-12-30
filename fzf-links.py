@@ -26,14 +26,20 @@ def run_fzf(fzf_options:str,choices:list[str]):
     print(cmd)
     return subprocess.run(cmd, input="\n".join(choices), shell=True, text=True, capture_output=True).stdout
 
-def open_link(link:str):
+def open_link(link:str, custom_open_cmd:str):
     """Open a link using the appropriate handler."""
-    if "BROWSER" in os.environ:
-        _ = subprocess.Popen([os.environ["BROWSER"], link], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    process: str | None = None
+    if custom_open_cmd:
+        process = custom_open_cmd
     elif shutil.which("xdg-open"):
-        _ = subprocess.Popen(["xdg-open", link], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        process = "xdg-open"
     elif shutil.which("open"):
-        _ = subprocess.Popen(["open", link], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        process = "open"
+    elif "BROWSER" in os.environ:
+        _ = subprocess.Popen([os.environ["BROWSER"], link], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    if process:
+        _ = subprocess.Popen([process, link], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 def trim_str(s:str) -> str:
     """Trim leading and trailing spaces from a string."""
@@ -131,7 +137,7 @@ def main(extra_filter:str='', history_limit:str="screen", custom_open_cmd:str=''
 
             post_handled_link = post_handler(link)
 
-            open_link(post_handled_link)
+            open_link(post_handled_link, custom_open_cmd)
         else:
             print(f"tmux-fzf-links: malformed selection: {selected_item}", file=sys.stderr)
 
