@@ -70,18 +70,15 @@ main() {
   typeset -U items
   typeset -a sorted_items numbered_items
   
-  tmux display-message "$(where grep)"
-  return
-
   # Define schemes
-  schemes[URL]="grep -oP '(https?|ftp|file):/?//[-A-Za-z0-9+&@#/%?=~_|!:,.;]*[-A-Za-z0-9+&@#/%=~_|]'"
+  schemes[URL]="grep -oE '(https?|ftp|file):/?//[-A-Za-z0-9+&@#/%?=~_|!:,.;]*[-A-Za-z0-9+&@#/%=~_|]'"
   
-  schemes[WWW]="grep -oP '(http?s://)?www\.[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}(/\S+)*' | grep -vE '^https?://' | sed 's/^\(.*\)$/http:\/\/\1/'"
+  schemes[WWW]="grep -oE '(http?s://)?www\.[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}(/\S+)*' | grep -vE '^https?://' | sed 's/^\(.*\)$/http:\/\/\1/'"
   
   schemes[IP]="grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:[0-9]{1,5})?(/\S+)*' | sed 's/^\(.*\)$/http:\/\/\1/'"
   
   schemes[GIT]="grep -oE '(ssh://)?git@\S*' | sed 's/:/\//g' | sed 's/^\(ssh\/\/\/\)\{0,1\}git@\(.*\)$/https:\/\/\2/'"
-
+  
   local scheme type match
 
   # Process each scheme
@@ -98,7 +95,7 @@ main() {
   done
   
   # Display the unique items in tmux
-  [[ -z "$items" ]] && tmux display 'tmux-fzf-url+: no URLs found' && exit 0
+  [[ -z "$items" ]] && tmux display 'tmux-fzf-url-links: no URLs found' && exit 0
 
   # Sort the array
   sorted_items=("${(on)items[@]}")
@@ -135,7 +132,7 @@ main() {
       open_link "$link"
     done <<< "$selected_items"
   else
-    tmux display 'tmux-fzf-url+: no selection made' && exit 0
+    tmux display 'tmux-fzf-url-links: no selection made' && exit 0
   fi
 }
 
