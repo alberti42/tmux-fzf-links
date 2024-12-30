@@ -1,8 +1,7 @@
 #!/usr/bin/env zsh
 #===============================================================================
-#   Author: Wenxuan
-#    Email: wenxuangm@gmail.com
-#  Created: 2018-04-06 09:30
+#   Author: (c) 2018 Wenxuan
+#   Author: (c) 2024 Andrea Alberti
 #===============================================================================
 
 # To ensure safe execution on all zsh systems
