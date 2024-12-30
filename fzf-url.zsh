@@ -81,4 +81,7 @@ main() {
   done
 }
 
+trap 'unfunction main run_fzf open_url' EXIT
+trap 'echo "Script interrupted or exited abnormally" >&2; unfunction main run_fzf open_url; exit 1' INT
+
 main "$@"
