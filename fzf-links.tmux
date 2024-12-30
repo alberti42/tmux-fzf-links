@@ -28,4 +28,5 @@ fzf_display_options=$(tmux_get '@fzf-links-fzf-display-options' '-w 100% -h 50% 
 path_extension=$(tmux_get '@fzf-links-path-extension' '')
 
 # Ensure parameters are safely passed, even if they are empty strings
-tmux bind-key "$key" run-shell -b "python3 $SCRIPT_DIR/fzf-links.py '$history_limit' '$editor_open_cmd' '$browser_open_cmd' $fzf_display_options' '$path_extension'"
+tmux bind-key "$key" run-shell -b "python3 $SCRIPT_DIR/fzf-links.py '$history_limit' '$editor_open_cmd' '$browser_open_cmd' '$fzf_display_options' '$path_extension'"
+

@@ -8,6 +8,7 @@ import os
 import re
 import subprocess
 import sys
+import shlex
 import shutil
 from enum import Enum
 from typing import Callable,TypedDict
@@ -17,6 +18,11 @@ class PatternNotMatching(Exception):
 
 class NoSuitableAppFound(Exception):
     """Raise exception when no suitable app was found to open the link"""
+
+class FzfError(Exception):
+    def __init__(self, message: str, returncode: int) -> None:
+        super().__init__(message)
+        self.returncode:int = returncode
 
 def git_handler(s:str) -> str:
     return f"https://github.com/{s}"
@@ -35,54 +41,82 @@ def error_handler(s:str) -> str:
     if not (isinstance(file,str) and isinstance(line,str)):
         raise PatternNotMatching('unexpectedtly pattern did not match')
 
-    return "{file}:{line}"
+    return f"{file}:{line}"
 
-class LinkType(Enum):
+class AppType(Enum):
     EDITOR = 0
     BROWSER = 1
 
 # Define the structure of each scheme entry
 class SchemeEntry(TypedDict):
-    link_type:LinkType
+    app_type:AppType
     pre_handler:Callable[[str], str] | None  # A function that takes a string and returns a string
     post_handler: Callable[[str], str] | None  # A function that takes a string and returns a string
     regex: re.Pattern[str]            # A compiled regex pattern
 
 # Define schemes
 schemes: dict[str, SchemeEntry] = {
-    "URL": {"link_type":LinkType.BROWSER, "post_handler": None, "pre_handler": None, "regex": re.compile(r"(?P<link>https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*)")},
-    "IP":  {"link_type":LinkType.BROWSER, "post_handler": None, "pre_handler": None, "regex": re.compile(r"(?P<link>[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:[0-9]{1,5})?(/\S+)*)")},
-    "GIT": {"link_type":LinkType.BROWSER, "post_handler": git_handler, "pre_handler": None, "regex": re.compile(r"(?P<link>(ssh://)?git@\S*)")},
-    "ERROR": {"link_type":LinkType.EDITOR, "post_handler": error_handler, "pre_handler": None, "regex": re.compile(r"(?P<link>File \"(?P<file>...*?)\"\, line (?P<line>[0-9]+))")}
+    "URL": {"app_type":AppType.BROWSER, "post_handler": None, "pre_handler": None, "regex": re.compile(r"(?P<link>https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*)")},
+    "IP":  {"app_type":AppType.BROWSER, "post_handler": None, "pre_handler": None, "regex": re.compile(r"(?P<link>[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:[0-9]{1,5})?(/\S+)*)")},
+    "GIT": {"app_type":AppType.BROWSER, "post_handler": git_handler, "pre_handler": None, "regex": re.compile(r"(?P<link>(ssh://)?git@\S*)")},
+    "ERROR": {"app_type":AppType.EDITOR, "post_handler": error_handler, "pre_handler": None, "regex": re.compile(r"(?P<link>File \"(?P<file>...*?)\"\, line (?P<line>[0-9]+))")}
 }
 
-def run_fzf(fzf_display_options:str,choices:list[str]):
+def run_fzf(fzf_display_options: str, choices: list[str]) -> subprocess.CompletedProcess[str]:
     """Run fzf with the given options."""
     cmd = f"fzf-tmux {fzf_display_options}"
-    return subprocess.run(cmd, input="\n".join(choices), shell=True, text=True, capture_output=True).stdout
+    result = subprocess.run(cmd, input="\n".join(choices), shell=True, text=True, capture_output=True)
+    if result.returncode not in [0, 130]:  # Allow exit code 130 for user cancellation
+        raise FzfError(f"fzf failed with exit code {result.returncode}: {result.stderr}", result.returncode)
+    return result
 
-def open_link(link:str, editor_open_cmd:str, browser_open_cmd:str, link_type:LinkType):
+def open_link(link:str, editor_open_cmd:str, browser_open_cmd:str, app_type:AppType):
     """Open a link using the appropriate handler."""
 
     process: str | None = None
 
-    if link_type==LinkType.EDITOR and editor_open_cmd:
+    if app_type==AppType.EDITOR and editor_open_cmd:
         process = editor_open_cmd
-    elif link_type==LinkType.BROWSER and browser_open_cmd:
+    elif app_type==AppType.BROWSER and browser_open_cmd:
         process = browser_open_cmd
     elif shutil.which("xdg-open"):
         process = "xdg-open"
     elif shutil.which("open"):
         process = "open"
-    elif link_type==LinkType.EDITOR and "EDITOR" in os.environ:
+    elif app_type==AppType.EDITOR and "EDITOR" in os.environ:
         process = os.environ["EDITOR"]
-    elif link_type==LinkType.BROWSER and "BROWSER" in os.environ:
+    elif app_type==AppType.BROWSER and "BROWSER" in os.environ:
         process = os.environ["BROWSER"]
 
-    if process:
-        _ = subprocess.Popen([process, link], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    else:
-        raise NoSuitableAppFound("suitable app was found to open the link")
+    if process is None:
+        raise NoSuitableAppFound("no suitable app was found to open the link")
+
+    print(f"PROCESS {process}")
+    # Build the command
+    cmd = f"{process} {shlex.quote(link)}"
+    print(cmd)
+    try:
+        # Run the command and capture stdout and stderr
+        proc = subprocess.Popen(
+            cmd,
+            shell=True,  # Execute in the user's default shell
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,  # Decode output to strings
+        )
+
+        # Communicate to capture output and error
+        stdout, stderr = proc.communicate()
+
+        # Check for errors or unexpected output
+        if proc.returncode != 0:
+            raise RuntimeError(f"Command failed with return code {proc.returncode}. Stderr: {stderr}")
+
+        print(f"Command succeeded. Stdout: {stdout}")
+    except Exception as e:
+        print(f"ERROR {e}")
+        raise RuntimeError(f"Failed to execute command '{cmd}': {e}")
+
 
 def trim_str(s:str) -> str:
     """Trim leading and trailing spaces from a string."""
@@ -137,11 +171,25 @@ def main(history_limit:str="screen", editor_open_cmd:str='', browser_open_cmd:st
     numbered_choices = [f"{idx:3d}  {item}" for idx, item in enumerate(sorted_choices, 1)]
     
     # Run fzf and get selected items
-    selected = run_fzf(fzf_display_options,numbered_choices)
-    if not selected.strip():
-        _ = subprocess.run("tmux display 'tmux-fzf-links: no selection made'", shell=True)
-        return
+    try:
+        # Run fzf and get selected items
+        result = run_fzf(fzf_display_options, numbered_choices)
+        
+        # Process selected items
+        selected = result.stdout.strip().splitlines()
 
+        # Handle normal behavior (130 is the exit code in fzf manual when user interrupts it)
+        if result.returncode == 130 or selected == []:
+            _ = subprocess.run(["tmux", "display", "tmux-fzf-links: no selection made"], shell=False)
+            return        
+
+    except FzfError as e:
+        if e.returncode == 130:
+            _ = subprocess.run(["tmux", "display", "tmux-fzf-links: selection cancelled (ESC or Ctrl+C)"], shell=False)
+        else:
+            _ = subprocess.run(["tmux", "display", f"tmux-fzf-links: unexpected error: {e}"], shell=False)
+
+    
     # Regular expression to parse the selected item
     selected_item_pattern = r"\s*(?P<idx>\d+)\s+(?P<type>\S+)\s+(?P<link>.+)"
 
@@ -155,25 +203,25 @@ def main(history_limit:str="screen", editor_open_cmd:str='', browser_open_cmd:st
             link = match.group("link")
 
             if not (isinstance(idx,str) and isinstance(scheme_type,str) and isinstance(link,str)):
-                _ = subprocess.run(f"tmux display 'tmux-fzf-url-links: malformed selection: {selected_item}'", shell=True)
+                _ = subprocess.run(['tmux', 'display', f'tmux-fzf-url-links: malformed selection: {selected_item}'], shell=False)
                 return
 
             post_handler = schemes[scheme_type]["post_handler"]
 
             if post_handler is None:
-                _ = subprocess.run(f"tmux display 'tmux-fzf-url-links: malformed selection: {selected_item}'", shell=True)
+                _ = subprocess.run(['tmux', 'display', f'tmux-fzf-url-links: malformed selection: {selected_item}'], shell=False)
                 return
 
             post_handled_link = post_handler(link)
             
             try:
-                open_link(post_handled_link, editor_open_cmd, browser_open_cmd, schemes[scheme_type]["link_type"])
-            except NoSuitableAppFound | PatternNotMatching as e:
-                _ = subprocess.run(f"tmux display 'tmux-fzf-links: {e}'", shell=True)
+                open_link(post_handled_link, editor_open_cmd, browser_open_cmd, schemes[scheme_type]["app_type"])
+            except (NoSuitableAppFound, PatternNotMatching) as e:
+                _ = subprocess.run(['tmux', 'display', f'tmux-fzf-links: {e}'], shell=False)
             except Exception as e:
-                _ = subprocess.run(f"tmux display 'tmux-fzf-links: unexpected error: {e}'", shell=True)
+                _ = subprocess.run(['tmux', 'display', f'tmux-fzf-links: unexpected error: {e}'], shell=False)
         else:
-            _ = subprocess.run(f"tmux display 'tmux-fzf-url-links: malformed selection: {selected_item}'", shell=True)
+            _ = subprocess.run(['tmux', 'display', f'tmux-fzf-url-links: malformed selection: {selected_item}'], shell=False)
 
 if __name__ == "__main__":
     try:
