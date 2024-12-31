@@ -29,8 +29,9 @@ editor_open_cmd=$(tmux_get '@fzf-links-editor-open-cmd' '')
 browser_open_cmd=$(tmux_get '@fzf-links-browser-open-cmd' '')
 fzf_display_options=$(tmux_get '@fzf-links-fzf-display-options' '-w 100% -h 50% --multi -0 --no-preview')
 path_extension=$(tmux_get '@fzf-links-path-extension' '')
-verbose=$(tmux_get '@fzf-links-verbose' 'on')
+loglevel=$(tmux_get '@fzf-links-loglevel' 'WARNING')
+logfile=$(tmux_get '@fzf-links-logfile' '')
 
 # Bind the key in Tmux to run the Python script
-tmux bind-key "$key" run-shell -b "python3 $SCRIPT_DIR/fzf-links.py '$history_limit' '$editor_open_cmd' '$browser_open_cmd' '$fzf_display_options' '$path_extension' '$verbose'"
-# tmux bind-key "$key" display-message "$SCRIPT_DIR/fzf-links.py '$history_limit' '$editor_open_cmd' '$browser_open_cmd' '$fzf_display_options' '$path_extension' '$verbose'"
+tmux bind-key "$key" run-shell -b "python3 $SCRIPT_DIR/fzf-links.py '$history_limit' '$editor_open_cmd' '$browser_open_cmd' '$fzf_display_options' '$path_extension' '$loglevel' '$logfile'"
+

@@ -10,6 +10,7 @@ import subprocess
 import sys
 import shlex
 import shutil
+import logging
 from enum import Enum
 from typing import Callable,TypedDict
 
@@ -30,6 +31,66 @@ class FzfError(Exception):
     def __init__(self, message: str, returncode: int) -> None:
         super().__init__(message)
         self.returncode:int = returncode
+
+# >>> LOGGER >>>
+
+class TmuxDisplayHandler(logging.Handler):
+    def emit(self, record):
+        # Format the log message
+        message = self.format(record)
+        try:
+            # Determine the display command options based on the log level
+            display_options = ["tmux", "display-message"]
+            if record.levelno >= logging.WARNING:
+                display_options.extend(["-d", "0"])  # Pause the message for warnings and errors
+
+            # Include the message
+            display_options.append(message)
+
+            # Use tmux display-message to show the log
+            subprocess.run(
+                display_options,
+                check=True,
+                shell=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except Exception as e:
+            # Fallback to console if tmux command fails
+            print(f"Failed to display message in tmux: {e}")
+
+# Set up logging
+logger = logging.getLogger("tmux_logger")
+
+# Create and add the TmuxDisplayHandler
+tmux_handler = TmuxDisplayHandler()
+tmux_handler.setLevel(0)  # Handler accepts any message
+# formatter = logging.Formatter("%(levelname)s: %(message)s")
+formatter = logging.Formatter("fzf-links: %(message)s")
+tmux_handler.setFormatter(formatter)
+
+
+def validate_log_level(user_level):
+    """
+    Validates the user-provided log level.
+    Falls back to WARNING if the level is invalid.
+
+    Args:
+        user_level (str): The log level provided by the user (e.g., 'DEBUG', 'INFO').
+
+    Returns:
+        int: A valid logging level.
+    """
+    # Use the internal mapping of log level names to numeric values
+    level_mapping = logging._nameToLevel
+
+    # Convert user input to uppercase for case-insensitive matching
+    level = user_level.upper() if isinstance(user_level, str) else ''
+    
+    # Return the corresponding logging level or fallback to WARNING
+    return level_mapping.get(level, logging.WARNING)
+
+# <<< LOGGER <<<
 
 def git_handler(match:re.Match[str]) -> str:
     return f"https://github.com/{match.group(0)}"
@@ -157,15 +218,39 @@ def remove_escape_sequences(text:str) -> str:
     # Replace escape sequences with an empty string
     return re.sub(ansi_escape_pattern, '', text)
 
-def main(history_limit:str='', editor_open_cmd:str='', browser_open_cmd:str='', fzf_display_options:str='', path_extension:str='', verbose:str=''):
+def main(history_limit:str='', editor_open_cmd:str='', browser_open_cmd:str='', fzf_display_options:str='', path_extension:str='', loglevel:str='', logfile:str=''):
+    # Set the loggger
+    logger.setLevel(validate_log_level(loglevel))
+
+    # Configure file log handler and check that the logfile can be written
+    if logfile:
+        # make sure the variable 'file_handler' exist as we need to use it in the exception
+        file_handler = None
+        try:            
+            file_handler = logging.FileHandler(logfile)
+            file_handler.setLevel(0)  # Log all levels to the file
+            file_handler.setFormatter(logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            ))
+            logger.addHandler(file_handler)
+
+            logger.info("fzf-links tmux plugin started")
+        except Exception as e:
+            # THE NEXT LINE THROWS AN ERROR - IT SHOULD BE FIXED
+            if file_handler and file_handler in logger.handlers:
+                logger.removeHandler(file_handler)
+            
+            # Add tmux error handler and show the error
+            logger.addHandler(tmux_handler)
+            logger.error(f"error logging to logfile: {e}")
+            return
+    
+    logger.addHandler(tmux_handler)
+
     # Add extra path if provided
     if path_extension and path_extension not in os.environ["PATH"]:
         os.environ["PATH"] = f"{path_extension}:{os.environ['PATH']}"
     
-    verbose_status:bool=False
-    if verbose=='on':
-        verbose_status=True
-
     # Capture tmux content
     capture_str:list[str]=['tmux', 'capture-pane', '-J', '-p', '-e']
     
@@ -210,8 +295,7 @@ def main(history_limit:str='', editor_open_cmd:str='', browser_open_cmd:str='', 
     del seen
     
     if items == []:
-        if verbose_status:
-            _ = subprocess.run(['tmux', 'display', 'tmux-fzf-url-links: no link found'], shell=False)
+        logger.info('no link found')
         return
 
     # Sort items
@@ -225,13 +309,12 @@ def main(history_limit:str='', editor_open_cmd:str='', browser_open_cmd:str='', 
         # Run fzf and get selected items
         result = run_fzf(fzf_display_options, numbered_choices)
     except FzfError as e:
-        _ = subprocess.run(["tmux", "display", f"tmux-fzf-links: unexpected error: {e}"], shell=False)
+        logger.error(f"error: unexpected error: {e}")
         return
     except FzfUserInterrupt as e:
-        if verbose_status == True:
-            _ = subprocess.run(["tmux", "display", "tmux-fzf-links: no selection made"], shell=False)
+        logger.info("no selection made")
         return
-    
+        
     # Process selected items
     selected_choices = result.stdout.splitlines()
 
@@ -252,18 +335,18 @@ def main(history_limit:str='', editor_open_cmd:str='', browser_open_cmd:str='', 
                 # before passing the `match` object to the post handler
                 selected_item=sorted_choices[idx-1][1]
             except:
-                _ = subprocess.run(['tmux', 'display', f'tmux-fzf-url-links: malformed selection: {selected_choice}'], shell=False)
+                logger.error(f"error: malformed selection: {selected_choice}")
                 continue
             
             scheme = schemes.get(scheme_type,None)
             
             if scheme is None:
-                _ = subprocess.run(['tmux', 'display', f'tmux-fzf-url-links: malformed selection: {selected_choice}'], shell=False)
+                logger.error(f"error: malformed selection: {selected_choice}")
                 continue
 
             match=scheme["regex"].search(selected_item)
             if match is None:
-                _ = subprocess.run(['tmux', 'display', f'unexpectedtly pattern did not match'], shell=False)
+                logger.error(f"error: pattern did not match unexpectedly")
                 continue          
       
             # Get the post_handler, which applies after the user selection
@@ -278,14 +361,17 @@ def main(history_limit:str='', editor_open_cmd:str='', browser_open_cmd:str='', 
             try:
                 open_link(post_handled_link, editor_open_cmd, browser_open_cmd, schemes[scheme_type]["app_type"])
             except (NoSuitableAppFound, PatternNotMatching, CommandFailed) as e:
-                _ = subprocess.run(['tmux', 'display', f'tmux-fzf-links: {e}'], shell=False)
+                logger.error(f"error: {e}")
+                return
             except Exception as e:
-                _ = subprocess.run(['tmux', 'display', f'tmux-fzf-links: unexpectedddd error: {e}'], shell=False)
+                logger.error(f"error: unexpected error: {e}")
+                return
         else:
-            _ = subprocess.run(['tmux', 'display', f'tmux-fzf-url-links: malformed selection: {selected_choice}'], shell=False)
+            logger.error(f"error: malformed selection: {selected_choice}")
+            return
 
 if __name__ == "__main__":
     try:
         main(*sys.argv[1:])
     except KeyboardInterrupt:
-        _ = subprocess.run(['tmux', 'display', 'tmux-fzf-links: script interrupted.'], shell=False)
+        logger.info("script interrupted")
