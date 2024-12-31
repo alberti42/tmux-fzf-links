@@ -1,0 +1,31 @@
+{
+    "folders": [
+        {
+            "path": ".",
+            "file_include_patterns": [
+                "*"
+            ],
+            "folder_exclude_patterns": [
+                ".ipynb_checkpoints",
+                "__pycache__"
+            ]
+        }
+    ],
+    "settings": {
+        "LSP": {
+            "LSP-basedpyright": {
+                "settings": {
+                    "venv": "",
+                    "venvPath": "",
+                    "python.pythonPath": "~/.pyenv/versions/py313/bin/python",
+                    "basedpyright.analysis.extraPaths": [
+                        "/Applications/Sublime Text.app/Contents/MacOS/Lib/python3.8.zip",
+                        "/Applications/Sublime Text.app/Contents/MacOS/Lib/python38",
+                    ],
+                    "basedpyright.analysis.typeCheckingMode": "basic",
+                    "basedpyright.analysis.reportOptionalSubscript": "error"
+                }
+            }
+        }
+    }
+}
