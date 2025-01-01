@@ -27,13 +27,15 @@ editor_open_cmd=$(tmux_get '@fzf-links-editor-open-cmd' '')
 browser_open_cmd=$(tmux_get '@fzf-links-browser-open-cmd' '')
 fzf_display_options=$(tmux_get '@fzf-links-fzf-display-options' '-w 100% -h 50% --multi -0 --no-preview')
 path_extension=$(tmux_get '@fzf-links-path-extension' '')
-loglevel=$(tmux_get '@fzf-links-loglevel' 'WARNING')
-logfile=$(tmux_get '@fzf-links-logfile' '')
+loglevel_tmux=$(tmux_get '@fzf-links-loglevel-tmux' 'WARNING')
+loglevel_file=$(tmux_get '@fzf-links-loglevel-tmux' 'DEBUG')
+log_filename=$(tmux_get '@fzf-links-log-filename' '')
 python_path=$(tmux_get '@fzf-links-python-path' 'python3')
 
 # Expand variables to resolve ~ and environment variables (e.g. $HOME)
-python_path=$(eval echo "$python_path")
-logfile=$(eval echo "$logfile")
+path_extension=$(eval echo "$path_extension")
+log_filename=$(eval echo "$loglevel_file")
+python_path=$(eval which "$python_path")
 
 # Bind the key in Tmux to run the Python script
 tmux bind-key "$key" run-shell -b "
@@ -41,4 +43,4 @@ if [[ ! -x \"$python_path\" ]]; then
   tmux display-message -d 0 \"fzf-links: no executable python found at the location: $python_path\"
   exit 0
 fi
-PYTHONPATH=\"$SCRIPT_DIR\" \"$python_path\" -m tmux-fzf-links \"$history_limit\" \"$editor_open_cmd\" \"$browser_open_cmd\" \"$fzf_display_options\" \"$path_extension\" \"$loglevel\" \"$logfile\""
+PYTHONPATH=\"$SCRIPT_DIR\" \"$python_path\" -m tmux-fzf-links \"$history_limit\" \"$editor_open_cmd\" \"$browser_open_cmd\" \"$fzf_display_options\" \"$path_extension\" \"$loglevel_tmux\" \"$loglevel_file\" \"$log_filename\""

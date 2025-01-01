@@ -16,6 +16,9 @@ from typing import override
 from .export import AppType
 from .DefaultSchemes import default_schemes
 
+class FileLoggerFailed(Exception):
+    """Raise exception when the file logger cannot be initialized"""
+
 class PatternNotMatching(Exception):
     """Raise exception when the pattern does not match a string already matched"""
 
@@ -62,15 +65,36 @@ class TmuxDisplayHandler(logging.Handler):
             # Fallback to console if tmux command fails
             print(f"Failed to display message in tmux: {e}")
 
-# Set up logging
-logger = logging.getLogger("tmux_logger")
+def setup_tmux_log_handler(loglevel_tmux:str='') -> TmuxDisplayHandler:
 
-# Create and add the TmuxDisplayHandler
-tmux_handler = TmuxDisplayHandler()
-tmux_handler.setLevel(0)  # Handler accepts any message
-# formatter = logging.Formatter("%(levelname)s: %(message)s")
-formatter = logging.Formatter("fzf-links: %(message)s")
-tmux_handler.setFormatter(formatter)
+    # === Set up tmux logger ===
+    
+    # Create and add the TmuxDisplayHandler
+    tmux_handler = TmuxDisplayHandler()
+    # formatter = logging.Formatter("%(levelname)s: %(message)s")
+    formatter = logging.Formatter("fzf-links: %(message)s")
+    tmux_handler.setFormatter(formatter)
+
+    # Set the log level
+    tmux_handler.setLevel(validate_log_level(loglevel_tmux))
+
+    return tmux_handler
+
+def setup_file_log_handler(loglevel_file:str='', log_filename:str='') -> logging.FileHandler:
+
+    # === Set up file logger ===
+
+    # Configure file log handler and check that the logfile can be written
+    try:            
+        file_handler = logging.FileHandler(log_filename)
+        file_handler.setLevel(validate_log_level(loglevel_file))
+        file_handler.setFormatter(logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        ))
+    except Exception as e:
+        raise FileLoggerFailed(f"error logging to logfile: {e}")
+
+    return file_handler
 
 def validate_log_level(user_level:str):
     """
@@ -171,33 +195,33 @@ def remove_escape_sequences(text:str) -> str:
     # Replace escape sequences with an empty string
     return re.sub(ansi_escape_pattern, '', text)
 
-def main(history_limit:str='', editor_open_cmd:str='', browser_open_cmd:str='', fzf_display_options:str='', path_extension:str='', loglevel:str='', logfile:str=''):
-    # Set the loggger
-    logger.setLevel(validate_log_level(loglevel))
-
-    # Configure file log handler and check that the logfile can be written
-    if logfile:
-        # make sure the variable 'file_handler' exist as we need to use it in the exception
-        file_handler = None
-        try:            
-            file_handler = logging.FileHandler(logfile)
-            file_handler.setLevel(0)  # Log all levels to the file
-            file_handler.setFormatter(logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            ))
-            logger.addHandler(file_handler)
-
-            logger.info("fzf-links tmux plugin started")
-        except Exception as e:
-            # THE NEXT LINE THROWS AN ERROR - IT SHOULD BE FIXED
-            if file_handler and file_handler in logger.handlers:
-                logger.removeHandler(file_handler)
-            
-            # Add tmux error handler and show the error
-            logger.addHandler(tmux_handler)
-            logger.error(f"error logging to logfile: {e}")
-            return
+def main(history_limit:str='', editor_open_cmd:str='', browser_open_cmd:str='', fzf_display_options:str='', path_extension:str='', loglevel_tmux:str='', loglevel_file:str='', log_filename:str=''):
     
+    # === Set up loggers ===
+    
+    logger = logging.getLogger("tmux_logger")
+    # Allow everything to pass; control the level with the handlers
+    logger.setLevel(0)
+
+    tmux_handler = setup_tmux_log_handler(loglevel_tmux)
+
+    try:
+        file_handler = setup_file_log_handler(loglevel_file, log_filename)
+        logger.addHandler(file_handler)
+        init_msg="fzf-links tmux plugin started"
+        logger.info(init_msg)
+    except Exception as e:
+        # to be on the safe side, remove the handler if it was added
+        for handler in logger.handlers:
+            logger.removeHandler(handler)
+            
+        # Set level to zero to make sure that the error is displayed 
+        tmux_handler.setLevel(0)
+        logger.addHandler(tmux_handler)
+        logger.error(f"{e}")
+        return
+
+    # Attach the tmux handler later to avoid displaying 'init_msg' 
     logger.addHandler(tmux_handler)
 
     # Add extra path if provided
