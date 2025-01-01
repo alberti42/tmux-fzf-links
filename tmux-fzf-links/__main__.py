@@ -65,7 +65,7 @@ class TmuxDisplayHandler(logging.Handler):
             # Fallback to console if tmux command fails
             print(f"Failed to display message in tmux: {e}")
 
-def setup_tmux_log_handler(loglevel_tmux:str='') -> TmuxDisplayHandler:
+def setup_tmux_log_handler() -> TmuxDisplayHandler:
 
     # === Set up tmux logger ===
     
@@ -75,19 +75,15 @@ def setup_tmux_log_handler(loglevel_tmux:str='') -> TmuxDisplayHandler:
     formatter = logging.Formatter("fzf-links: %(message)s")
     tmux_handler.setFormatter(formatter)
 
-    # Set the log level
-    tmux_handler.setLevel(validate_log_level(loglevel_tmux))
-
     return tmux_handler
 
-def setup_file_log_handler(loglevel_file:str='', log_filename:str='') -> logging.FileHandler:
+def setup_file_log_handler(log_filename:str='') -> logging.FileHandler:
 
     # === Set up file logger ===
 
     # Configure file log handler and check that the logfile can be written
     try:            
         file_handler = logging.FileHandler(log_filename)
-        file_handler.setLevel(validate_log_level(loglevel_file))
         file_handler.setFormatter(logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         ))
@@ -163,21 +159,26 @@ class FzfLinks:
 
     def set_up_logger(self):
 
-        # === Set up loggers ===
-        
+        # Set up logger
         self.logger = logging.getLogger("tmux_logger")
         # Allow everything to pass; control the level with the handlers
         self.logger.setLevel(0)
 
-        tmux_handler = setup_tmux_log_handler(self.loglevel_tmux)
-
+        # Set up tmux log handler
+        tmux_handler = setup_tmux_log_handler()
+        # tmux_handler.setLevel(validate_log_level(self.loglevel_tmux))
+        tmux_handler.setLevel(0)
+        
+        # Set up file log handler and check that the file is writable
         try:
-            file_handler = setup_file_log_handler(self.loglevel_file, self.log_filename)
+            file_handler = setup_file_log_handler(self.log_filename)
+            # file_handler.setLevel(validate_log_level(self.loglevel_file))
+            file_handler.setLevel(0)
             self.logger.addHandler(file_handler)
             init_msg="fzf-links tmux plugin started"
             self.logger.info(init_msg)
         except Exception as e:
-            # to be on the safe side, remove the handler if it was added
+            # To be safe, remove the handler if it was added
             for handler in self.logger.handlers:
                 self.logger.removeHandler(handler)
                 
@@ -189,14 +190,17 @@ class FzfLinks:
 
         # Attach the tmux handler later to avoid displaying 'init_msg' 
         self.logger.addHandler(tmux_handler)
+ 
+        self.logger.info(f"Log level: {file_handler.level}")
+
+        self.logger_ready = True
+        
+    def run(self):
 
         # Add extra path if provided
         if self.path_extension and self.path_extension not in os.environ["PATH"]:
             os.environ["PATH"] = f"{self.path_extension}:{os.environ['PATH']}"
 
-        self.logger_ready = True
-        
-    def run(self):
         # Capture tmux content
         capture_str:list[str]=['tmux', 'capture-pane', '-J', '-p', '-e']
         
@@ -347,6 +351,8 @@ class FzfLinks:
         # Add '{process}' as the first element
         cmd_plus_args.insert(0, process)
         
+        self.logger.debug(f"{cmd_plus_args}")
+
         try:
             # Run the command and capture stdout and stderr
             proc = subprocess.Popen(
