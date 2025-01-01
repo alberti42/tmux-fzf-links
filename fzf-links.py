@@ -11,8 +11,12 @@ import sys
 import shlex
 import shutil
 import logging
+from typing import override
 from enum import Enum
 from typing import Callable,TypedDict
+
+from .export import AppType
+from .DefaultSchemes import default_schemes
 
 class PatternNotMatching(Exception):
     """Raise exception when the pattern does not match a string already matched"""
@@ -35,7 +39,8 @@ class FzfError(Exception):
 # >>> LOGGER >>>
 
 class TmuxDisplayHandler(logging.Handler):
-    def emit(self, record):
+    @override
+    def emit(self, record:logging.LogRecord):
         # Format the log message
         message = self.format(record)
         try:
@@ -48,7 +53,7 @@ class TmuxDisplayHandler(logging.Handler):
             display_options.append(message)
 
             # Use tmux display-message to show the log
-            subprocess.run(
+            _ = subprocess.run(
                 display_options,
                 check=True,
                 shell=False,
@@ -69,8 +74,7 @@ tmux_handler.setLevel(0)  # Handler accepts any message
 formatter = logging.Formatter("fzf-links: %(message)s")
 tmux_handler.setFormatter(formatter)
 
-
-def validate_log_level(user_level):
+def validate_log_level(user_level:str):
     """
     Validates the user-provided log level.
     Falls back to WARNING if the level is invalid.
@@ -91,55 +95,6 @@ def validate_log_level(user_level):
     return level_mapping.get(level, logging.WARNING)
 
 # <<< LOGGER <<<
-
-def git_handler(match:re.Match[str]) -> str:
-    return f"https://github.com/{match.group(0)}"
-
-def error_handler(match:re.Match[str]) -> str:
-    # Handle error messages appearing on the command line
-    # and create an appropriate link to open the affected file 
-    
-    file=match.group('file')
-    line=match.group('line')
-
-    return f"{file}:{line}"
-
-class AppType(Enum):
-    EDITOR = 0
-    BROWSER = 1
-
-# Define the structure of each scheme entry
-class SchemeEntry(TypedDict):
-    app_type:AppType
-    pre_handler:Callable[[re.Match[str]], str] | None  # A function that takes a string and returns a string
-    post_handler: Callable[[re.Match[str]], str] | None  # A function that takes a string and returns a string
-    regex: re.Pattern[str]            # A compiled regex pattern
-
-# Define schemes
-schemes: dict[str, SchemeEntry] = {
-    # One can use group names as done in the scheme ERROR to extract subblocks, which are availble to the pre_handler and post_handler
-    "URL": {
-        "app_type": AppType.BROWSER,
-        "post_handler": None,
-        "pre_handler": None, "regex": re.compile(r"https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*")
-        },
-    "IP": {
-        "app_type": AppType.BROWSER,
-        "post_handler": None,
-        "pre_handler": None, "regex": re.compile(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:[0-9]{1,5})?(/\S+)*")
-        },
-    "GIT": {
-        "app_type":AppType.BROWSER,
-        "post_handler": git_handler,
-        "pre_handler": None,
-        "regex": re.compile(r"(ssh://)?git@\S*")
-        },
-    "ERROR": {
-        "app_type": AppType.EDITOR,
-        "post_handler": error_handler,
-        "pre_handler": None, "regex": re.compile(r"File \"(?P<file>...*?)\"\, line (?P<line>[0-9]+)")
-        }
-    }
 
 def run_fzf(fzf_display_options: str, choices: list[str]) -> subprocess.CompletedProcess[str]:
     """Run fzf with the given options."""
@@ -273,6 +228,8 @@ def main(history_limit:str='', editor_open_cmd:str='', browser_open_cmd:str='', 
     seen:set[str] = set()
     items:list[tuple[str,str]] = []
     
+    schemes = default_schemes
+
     max_len_scheme_names:int = max([len(scheme) for scheme in schemes.keys()])
 
     # Process each scheme

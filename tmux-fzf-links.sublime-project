@@ -26,6 +26,8 @@
                     "basedpyright.analysis.reportOptionalSubscript": "error"
                 }
             }
+        },
+        "env": {
         }
     }
 }
