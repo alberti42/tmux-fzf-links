@@ -16,9 +16,6 @@ from typing import override
 from .export import AppType
 from .DefaultSchemes import default_schemes
 
-class FileLoggerFailed(Exception):
-    """Raise exception when the file logger cannot be initialized"""
-
 class PatternNotMatching(Exception):
     """Raise exception when the pattern does not match a string already matched"""
 
@@ -82,14 +79,11 @@ def setup_file_log_handler(log_filename:str='') -> logging.FileHandler:
     # === Set up file logger ===
 
     # Configure file log handler and check that the logfile can be written
-    try:            
-        file_handler = logging.FileHandler(log_filename)
-        file_handler.setFormatter(logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        ))
-    except Exception as e:
-        raise FileLoggerFailed(f"error logging to logfile: {e}")
-
+    file_handler = logging.FileHandler(log_filename)
+    file_handler.setFormatter(logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    ))
+    
     return file_handler
 
 def validate_log_level(user_level:str):
@@ -124,280 +118,263 @@ def remove_escape_sequences(text:str) -> str:
     # Replace escape sequences with an empty string
     return re.sub(ansi_escape_pattern, '', text)
 
-class FzfLinks:
+def set_up_logger(loglevel_tmux:str,loglevel_file:str,log_filename:str) -> logging.Logger:
 
-    logger:logging.Logger
-    logger_ready=False
+    # Set up the root logger; note: if you decide to create a child logger
+    # the root logger level needs to be configured to allow for messages
+    # to pass through.
+    logger = logging.getLogger()  # root logger when no argument is provided
+    # Allow all log messages to pass through; we control the level using handlers
+    logger.setLevel(0)
 
-    history_limit:str
-    editor_open_cmd:str
-    browser_open_cmd:str
-    fzf_display_optio:str
-    path_extension:str
-    loglevel_tmux:str
-    loglevel_file:str
-
-    def initialize(self,
-            history_limit:str='',
-            editor_open_cmd:str='',
-            browser_open_cmd:str='',
-            fzf_display_options:str='',
-            path_extension:str='',
-            loglevel_tmux:str='',
-            loglevel_file:str='',
-            log_filename:str=''
-        ):
-
-        self.history_limit=history_limit
-        self.editor_open_cmd=editor_open_cmd
-        self.browser_open_cmd=browser_open_cmd
-        self.fzf_display_options=fzf_display_options
-        self.path_extension=path_extension
-        self.loglevel_tmux=loglevel_tmux
-        self.loglevel_file=loglevel_file
-        self.log_filename=log_filename
-
-    def set_up_logger(self):
-
-        # Set up logger
-        self.logger = logging.getLogger("tmux_logger")
-        # Allow everything to pass; control the level with the handlers
-        self.logger.setLevel(0)
-
-        # Set up tmux log handler
-        tmux_handler = setup_tmux_log_handler()
-        # tmux_handler.setLevel(validate_log_level(self.loglevel_tmux))
-        tmux_handler.setLevel(0)
-        
-        # Set up file log handler and check that the file is writable
-        try:
-            file_handler = setup_file_log_handler(self.log_filename)
-            # file_handler.setLevel(validate_log_level(self.loglevel_file))
-            file_handler.setLevel(0)
-            self.logger.addHandler(file_handler)
-            init_msg="fzf-links tmux plugin started"
-            self.logger.info(init_msg)
-        except Exception as e:
-            # To be safe, remove the handler if it was added
-            for handler in self.logger.handlers:
-                self.logger.removeHandler(handler)
-                
-            # Set level to zero to make sure that the error is displayed 
-            tmux_handler.setLevel(0)
-            self.logger.addHandler(tmux_handler)
-            self.logger.error(f"{e}")
-            return
-
-        # Attach the tmux handler later to avoid displaying 'init_msg' 
-        self.logger.addHandler(tmux_handler)
- 
-        self.logger.info(f"Log level: {file_handler.level}")
-
-        self.logger_ready = True
-        
-    def run(self):
-
-        # Add extra path if provided
-        if self.path_extension and self.path_extension not in os.environ["PATH"]:
-            os.environ["PATH"] = f"{self.path_extension}:{os.environ['PATH']}"
-
-        # Capture tmux content
-        capture_str:list[str]=['tmux', 'capture-pane', '-J', '-p', '-e']
-        
-        if self.history_limit != "screen":
-            # It the history limit is not set to screen, then so many extra
-            # lines are captured from the buffer history
-            capture_str.extend(['-S', f'-{self.history_limit}'])
-        
-        content = subprocess.check_output(
-                capture_str,
-                shell=False,
-                text=True,
-            )
-
-        # Remove escape sequences
-        content=remove_escape_sequences(content)
-
-        # We use the unique set as an expedient to sort over
-        # pre_handled_text while keeping the original text
-        seen:set[str] = set()
-        items:list[tuple[str,str]] = []
-        
-        schemes = default_schemes
-
-        max_len_scheme_names:int = max([len(scheme) for scheme in schemes.keys()])
-
-        # Process each scheme
-        for scheme_type,scheme in schemes.items():
-            # Use regex.finditer to iterate over all matches
-            for match in scheme['regex'].finditer(content):
-                # Extract the match string
-                matched_text = match.group(0)  # Group 0 contains the entire match
-                if scheme['pre_handler']:
-                    pre_handled_text = scheme['pre_handler'](match)
-                else:
-                    pre_handled_text = matched_text
-                if matched_text not in seen:
-                    seen.add(matched_text)
-                    # We justify the scheme name for prettier print
-                    justified_scheme_type=scheme_type.ljust(max_len_scheme_names)
-                    # We keep a copy of the original matched text for later
-                    items.append((justified_scheme_type + "  " + pre_handled_text,matched_text,))
-        # Clean up no longer needed variables
-        del seen
-        
-        if items == []:
-            self.logger.info('no link found')
-            return
-
-        # Sort items
-        sorted_choices = sorted(items, key=lambda x: x[0])
-
-        # Number the items
-        numbered_choices = [f"{idx:3d}  {item[0]}" for idx, item in enumerate(sorted_choices, 1)]
-        
-        # Run fzf and get selected items
-        try:
-            # Run fzf and get selected items
-            result = self.run_fzf(numbered_choices)
-        except FzfError as e:
-            self.logger.error(f"error: unexpected error: {e}")
-            return
-        except FzfUserInterrupt as e:
-            self.logger.info("no selection made")
-            return
+    # Set up tmux log handler
+    tmux_handler = setup_tmux_log_handler()
+    tmux_handler.setLevel(validate_log_level(loglevel_tmux))
+    logger.addHandler(tmux_handler)
+    
+    # Set up file log handler and check that the file is writable
+    try:
+        file_handler = setup_file_log_handler(log_filename)
+        file_handler.setLevel(validate_log_level(loglevel_file))
+        logger.addHandler(file_handler)
+        init_msg="fzf-links tmux plugin started"
+        # Send an initialization message to the file handler only
+        file_handler.handle(logging.LogRecord(
+                name=logger.name,
+                level=logging.INFO,
+                pathname=__file__,
+                lineno=0,
+                msg=init_msg,
+                args=None,
+                exc_info=None,
+            ))
+    except Exception as e:
+        # To be safe, remove the handler if it was added
+        for handler in logger.handlers:
+            if isinstance(handler,logging.FileHandler):
+                logger.removeHandler(handler)
             
-        # Process selected items
-        selected_choices = result.stdout.splitlines()
+        # Set level to zero to make sure that the error is displayed 
+        tmux_handler.setLevel(0)
+        # Log the error to tmux display and exit 
+        logger.error(f"error logging to logfile: {log_filename}")
+        sys.exit(1)
+        
+    return logger
 
-        # Regular expression to parse the selected item from the fzf options
-        # Each line is in the format {three-digit number, space, space, 
-        selected_item_pattern = r"\s*(?P<idx>\d+)\s+(?P<type>\S+)\s+(?P<link>.+)"
+def run_fzf(fzf_display_options:str,choices: list[str]) -> subprocess.CompletedProcess[str]:
+    """Run fzf with the given options."""
+    # Split the options into a list
+    cmd_plus_args: list[str] = shlex.split(fzf_display_options)
 
-        # Process selected items
-        for selected_choice in selected_choices:
-            match = re.match(selected_item_pattern, selected_choice)
-            if match:
-                idx_str:str = match.group("idx")
-                scheme_type:str = match.group("type")
-                
-                try:
-                    idx:int=int(idx_str,10)
-                    # pick the original item to be searched again
-                    # before passing the `match` object to the post handler
-                    selected_item=sorted_choices[idx-1][1]
-                except:
-                    self.logger.error(f"error: malformed selection: {selected_choice}")
-                    continue
-                
-                scheme = schemes.get(scheme_type,None)
-                
-                if scheme is None:
-                    self.logger.error(f"error: malformed selection: {selected_choice}")
-                    continue
+    # Add 'fzf-tmux' as the first element
+    cmd_plus_args.insert(0, 'fzf-tmux')
 
-                match=scheme["regex"].search(selected_item)
-                if match is None:
-                    self.logger.error(f"error: pattern did not match unexpectedly")
-                    continue          
-          
-                # Get the post_handler, which applies after the user selection
-                post_handler = scheme.get("post_handler",None)
+    result = subprocess.run(cmd_plus_args, input="\n".join(choices), shell=True, text=True, capture_output=True)
+    if result.returncode == 0:
+        return result
+    elif result.returncode == 130:
+        # Allow exit code 130 for user cancellation; see fzf manual
+        raise FzfUserInterrupt()
+    else:
+        raise FzfError(f"fzf failed with exit code {result.returncode}: {result.stderr}", result.returncode)   
 
-                # Process the match with the post handler
-                if post_handler:
-                    post_handled_link = post_handler(match)    
-                else:
-                    post_handled_link = match.group(0)
-                
-                try:
-                    self.open_link(post_handled_link, schemes[scheme_type]["app_type"])
-                except (NoSuitableAppFound, PatternNotMatching, CommandFailed) as e:
-                    self.logger.error(f"error: {e}")
-                    return
-                except Exception as e:
-                    self.logger.error(f"error: unexpected error: {e}")
-                    return
+def open_link(editor_open_cmd:str, browser_open_cmd:str, link:str, app_type:AppType, logger:logging.Logger):
+    """Open a link using the appropriate handler."""
+
+    process: str | None = None
+
+    if app_type==AppType.EDITOR and editor_open_cmd:
+        process = editor_open_cmd
+    elif app_type==AppType.BROWSER and browser_open_cmd:
+        process = browser_open_cmd
+    elif shutil.which("xdg-open"):
+        process = "xdg-open"
+    elif shutil.which("open"):
+        process = "open"
+    elif app_type==AppType.EDITOR and "EDITOR" in os.environ:
+        process = os.environ["EDITOR"]
+    elif app_type==AppType.BROWSER and "BROWSER" in os.environ:
+        process = os.environ["BROWSER"]
+
+    if process is None:
+        raise NoSuitableAppFound("no suitable app was found to open the link")
+
+    # Build the command
+    
+    # Split the options into a list
+    cmd_plus_args: list[str] = shlex.split(link)
+
+    # Add '{process}' as the first element
+    cmd_plus_args.insert(0, process)
+    
+    logger.debug(f"{cmd_plus_args}")
+
+    try:
+        # Run the command and capture stdout and stderr
+        proc = subprocess.Popen(
+            cmd_plus_args,
+            shell=False,  # Execute in the user's default shell
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=False,  # Decode output to strings
+        )
+
+        # Communicate to capture output and error
+        _, stderr = proc.communicate()
+
+        # Check for errors or unexpected output
+        if proc.returncode != 0:
+            raise CommandFailed(f"return code {proc.returncode}: {stderr.decode('utf-8')}")
+
+    except Exception as e:
+        raise CommandFailed(f"failed to execute command '{" ".join(cmd_plus_args)}': {e}")
+
+def run(
+        history_limit:str='',
+        editor_open_cmd:str='',
+        browser_open_cmd:str='',
+        fzf_display_options:str='',
+        path_extension:str='',
+        loglevel_tmux:str='',
+        loglevel_file:str='',
+        log_filename:str=''
+    ):
+
+    # Set up the logger
+    logger = set_up_logger(loglevel_tmux,loglevel_file,log_filename)
+
+    # Add extra path if provided
+    if path_extension and path_extension not in os.environ["PATH"]:
+        os.environ["PATH"] = f"{path_extension}:{os.environ['PATH']}"
+
+    # Capture tmux content
+    capture_str:list[str]=['tmux', 'capture-pane', '-J', '-p', '-e']
+
+    if history_limit != "screen":
+        # It the history limit is not set to screen, then so many extra
+        # lines are captured from the buffer history
+        capture_str.extend(['-S', f'-{history_limit}'])
+
+    content = subprocess.check_output(
+            capture_str,
+            shell=False,
+            text=True,
+        )
+
+    # Remove escape sequences
+    content=remove_escape_sequences(content)
+
+    # We use the unique set as an expedient to sort over
+    # pre_handled_text while keeping the original text
+    seen:set[str] = set()
+    items:list[tuple[str,str]] = []
+
+    schemes = default_schemes
+
+    max_len_scheme_names:int = max([len(scheme) for scheme in schemes.keys()])
+
+    # Process each scheme
+    for scheme_type,scheme in schemes.items():
+        # Use regex.finditer to iterate over all matches
+        for match in scheme['regex'].finditer(content):
+            # Extract the match string
+            matched_text = match.group(0)  # Group 0 contains the entire match
+            if scheme['pre_handler']:
+                pre_handled_text = scheme['pre_handler'](match)
             else:
-                self.logger.error(f"error: malformed selection: {selected_choice}")
-                return
+                pre_handled_text = matched_text
+            if matched_text not in seen:
+                seen.add(matched_text)
+                # We justify the scheme name for prettier print
+                justified_scheme_type=scheme_type.ljust(max_len_scheme_names)
+                # We keep a copy of the original matched text for later
+                items.append((justified_scheme_type + "  " + pre_handled_text,matched_text,))
+    # Clean up no longer needed variables
+    del seen
 
-    def open_link(self, link:str, app_type:AppType):
-        """Open a link using the appropriate handler."""
+    if items == []:
+        logger.info('no link found')
+        return
 
-        process: str | None = None
+    # Sort items
+    sorted_choices = sorted(items, key=lambda x: x[0])
 
-        if app_type==AppType.EDITOR and self.editor_open_cmd:
-            process = self.editor_open_cmd
-        elif app_type==AppType.BROWSER and self.browser_open_cmd:
-            process = self.browser_open_cmd
-        elif shutil.which("xdg-open"):
-            process = "xdg-open"
-        elif shutil.which("open"):
-            process = "open"
-        elif app_type==AppType.EDITOR and "EDITOR" in os.environ:
-            process = os.environ["EDITOR"]
-        elif app_type==AppType.BROWSER and "BROWSER" in os.environ:
-            process = os.environ["BROWSER"]
+    # Number the items
+    numbered_choices = [f"{idx:3d}  {item[0]}" for idx, item in enumerate(sorted_choices, 1)]
 
-        if process is None:
-            raise NoSuitableAppFound("no suitable app was found to open the link")
-
-        # Build the command
+    # Run fzf and get selected items
+    try:
+        # Run fzf and get selected items
+        result = run_fzf(fzf_display_options,numbered_choices)
+    except FzfError as e:
+        logger.error(f"error: unexpected error: {e}")
+        sys.exit(1)
+    except FzfUserInterrupt as e:
+        logger.info("no selection made")
+        sys.exit(0)
         
-        # Split the options into a list
-        cmd_plus_args: list[str] = shlex.split(link)
+    # Process selected items
+    selected_choices = result.stdout.splitlines()
 
-        # Add '{process}' as the first element
-        cmd_plus_args.insert(0, process)
-        
-        self.logger.debug(f"{cmd_plus_args}")
+    # Regular expression to parse the selected item from the fzf options
+    # Each line is in the format {three-digit number, space, space, 
+    selected_item_pattern = r"\s*(?P<idx>\d+)\s+(?P<type>\S+)\s+(?P<link>.+)"
 
-        try:
-            # Run the command and capture stdout and stderr
-            proc = subprocess.Popen(
-                cmd_plus_args,
-                shell=False,  # Execute in the user's default shell
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=False,  # Decode output to strings
-            )
+    # Process selected items
+    for selected_choice in selected_choices:
+        match = re.match(selected_item_pattern, selected_choice)
+        if match:
+            idx_str:str = match.group("idx")
+            scheme_type:str = match.group("type")
+            
+            try:
+                idx:int=int(idx_str,10)
+                # pick the original item to be searched again
+                # before passing the `match` object to the post handler
+                selected_item=sorted_choices[idx-1][1]
+            except:
+                logger.error(f"error: malformed selection: {selected_choice}")
+                continue
+            
+            scheme = schemes.get(scheme_type,None)
+            
+            if scheme is None:
+                logger.error(f"error: malformed selection: {selected_choice}")
+                continue
 
-            # Communicate to capture output and error
-            _, stderr = proc.communicate()
+            match=scheme["regex"].search(selected_item)
+            if match is None:
+                logger.error(f"error: pattern did not match unexpectedly")
+                continue          
+      
+            # Get the post_handler, which applies after the user selection
+            post_handler = scheme.get("post_handler",None)
 
-            # Check for errors or unexpected output
-            if proc.returncode != 0:
-                raise CommandFailed(f"return code {proc.returncode}: {stderr.decode('utf-8')}")
-
-        except Exception as e:
-            raise CommandFailed(f"failed to execute command '{" ".join(cmd_plus_args)}': {e}")
-
-    def run_fzf(self, choices: list[str]) -> subprocess.CompletedProcess[str]:
-        """Run fzf with the given options."""
-        # Split the options into a list
-        cmd_plus_args: list[str] = shlex.split(self.fzf_display_options)
-
-        # Add 'fzf-tmux' as the first element
-        cmd_plus_args.insert(0, 'fzf-tmux')
-
-        result = subprocess.run(cmd_plus_args, input="\n".join(choices), shell=True, text=True, capture_output=True)
-        if result.returncode == 0:
-            return result
-        elif result.returncode == 130:
-            # Allow exit code 130 for user cancellation; see fzf manual
-            raise FzfUserInterrupt()
+            # Process the match with the post handler
+            if post_handler:
+                post_handled_link = post_handler(match)    
+            else:
+                post_handled_link = match.group(0)
+            
+            try:
+                open_link(editor_open_cmd,browser_open_cmd,post_handled_link, schemes[scheme_type]["app_type"],logger)
+            except (NoSuitableAppFound, PatternNotMatching, CommandFailed) as e:
+                logger.error(f"error: {e}")
+                continue
+            except Exception as e:
+                logger.error(f"error: unexpected error: {e}")
+                continue
         else:
-            raise FzfError(f"fzf failed with exit code {result.returncode}: {result.stderr}", result.returncode)
-
-
+            logger.error(f"error: malformed selection: {selected_choice}")
+            continue
 
 if __name__ == "__main__":
-    fzf_links = FzfLinks()
-    try:
-        fzf_links.initialize(*sys.argv[1:])
-        fzf_links.set_up_logger()
-        fzf_links.run()
-    except KeyboardInterrupt:
-        if fzf_links.logger_ready:
-            fzf_links.logger.info("script interrupted")
+    run(*sys.argv[1:])
+    # try:
+    #     run(*sys.argv[1:])
+    # except KeyboardInterrupt:
+    #     # root logger
+    #     logger=logging.getLogger()
+    #     if logger.handlers:
+    #         logger.info("script interrupted")
