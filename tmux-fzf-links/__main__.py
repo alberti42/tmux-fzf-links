@@ -16,6 +16,9 @@ from typing import override
 from .export import AppType
 from .DefaultSchemes import default_schemes
 
+class FailedTmuxPaneHeight(Exception):
+    """Raise exception when tmux pane height cannot be determined"""
+
 class PatternNotMatching(Exception):
     """Raise exception when the pattern does not match a string already matched"""
 
@@ -159,18 +162,66 @@ def set_up_logger(loglevel_tmux:str,loglevel_file:str,log_filename:str) -> loggi
         # Log the error to tmux display and exit 
         logger.error(f"error logging to logfile: {log_filename}")
         sys.exit(1)
-        
+
     return logger
+
+def get_max_h_value(cmd_user_args:list[str]) -> int | None:
+    if '-max-h' in cmd_user_args:
+        try:
+            # Find the index of '-max-h' and get the next argument
+            max_h_index = cmd_user_args.index('-max-h')
+            max_h_arg = cmd_user_args[max_h_index + 1]
+
+            # Remove '-max-h' and its argument
+            cmd_user_args.pop(max_h_index)  # Remove '-max-h'
+            cmd_user_args.pop(max_h_index)  # Remove the argument (shifts due to first pop)
+
+            if max_h_arg.endswith('%'):
+                # Convert percentage to an integer based on pane_height
+                percentage = int(max_h_arg[:-1])  # Remove '%' and convert to int
+
+                try:
+                    pane_height_str = subprocess.check_output(
+                        ('tmux', 'display', '-p', '#{pane_height}',),
+                        shell=False,
+                        text=True,
+                    )
+                    pane_height = int(pane_height_str)
+                except Exception as e:
+                    raise FailedTmuxPaneHeight(f"tmux pane height could not be determined: {e}")
+                
+                max_h_value = pane_height * percentage // 100
+            else:
+                # Convert the argument directly to an integer
+                max_h_value = int(max_h_arg)
+
+            return max_h_value
+        except (IndexError, ValueError):
+            # Handle missing or invalid value for '-max-h'
+            raise FailedTmuxPaneHeight("option '-max-h' is defined but its value is missing or invalid.")
+    else:
+        # Parameter '-max-h' is not defined
+        return None
 
 def run_fzf(fzf_display_options:str,choices: list[str]) -> subprocess.CompletedProcess[str]:
     """Run fzf with the given options."""
+
     # Split the options into a list
-    cmd_plus_args: list[str] = shlex.split(fzf_display_options)
+    cmd_user_args: list[str] = shlex.split(fzf_display_options)
+    max_h_value = get_max_h_value(cmd_user_args)
 
-    # Add 'fzf-tmux' as the first element
-    cmd_plus_args.insert(0, 'fzf-tmux')
+    # Compute the required height
+    height=len(choices)+4 # number of lines
+    if max_h_value:
+        height=max(min(height,max_h_value),5)
+    
+    # Set a list of default argument, which are computed dynamically
+    cmd_default_args = ['-h',f'{height:d}']
 
-    result = subprocess.run(cmd_plus_args, input="\n".join(choices), shell=True, text=True, capture_output=True)
+    # In this order, user arguments take priority over default arguments
+    cmd_args = ['fzf-tmux'] + cmd_default_args + cmd_user_args
+
+    result = subprocess.run(cmd_args, input="\n".join(choices), shell=False, text=True, capture_output=True)
     if result.returncode == 0:
         return result
     elif result.returncode == 130:
@@ -179,7 +230,7 @@ def run_fzf(fzf_display_options:str,choices: list[str]) -> subprocess.CompletedP
     else:
         raise FzfError(f"fzf failed with exit code {result.returncode}: {result.stderr}", result.returncode)   
 
-def open_link(editor_open_cmd:str, browser_open_cmd:str, link:str, app_type:AppType, logger:logging.Logger):
+def open_link(editor_open_cmd:str, browser_open_cmd:str, link:str, app_type:AppType):
     """Open a link using the appropriate handler."""
 
     process: str | None = None
@@ -208,8 +259,6 @@ def open_link(editor_open_cmd:str, browser_open_cmd:str, link:str, app_type:AppT
     # Add '{process}' as the first element
     cmd_plus_args.insert(0, process)
     
-    logger.debug(f"{cmd_plus_args}")
-
     try:
         # Run the command and capture stdout and stderr
         proc = subprocess.Popen(
@@ -358,7 +407,7 @@ def run(
                 post_handled_link = match.group(0)
             
             try:
-                open_link(editor_open_cmd,browser_open_cmd,post_handled_link, schemes[scheme_type]["app_type"],logger)
+                open_link(editor_open_cmd,browser_open_cmd,post_handled_link, schemes[scheme_type]["app_type"])
             except (NoSuitableAppFound, PatternNotMatching, CommandFailed) as e:
                 logger.error(f"error: {e}")
                 continue
@@ -370,11 +419,15 @@ def run(
             continue
 
 if __name__ == "__main__":
-    run(*sys.argv[1:])
-    # try:
-    #     run(*sys.argv[1:])
-    # except KeyboardInterrupt:
-    #     # root logger
-    #     logger=logging.getLogger()
-    #     if logger.handlers:
-    #         logger.info("script interrupted")
+    try:
+        run(*sys.argv[1:])
+    except KeyboardInterrupt:
+        # root logger
+        root_logger=logging.getLogger()
+        if root_logger.handlers:
+            root_logger.info("script interrupted")
+    except Exception as e:
+        # root logger
+        root_logger=logging.getLogger()
+        if root_logger.handlers:
+            root_logger.error(f"unexpected runtime error: {e}")
