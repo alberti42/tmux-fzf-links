@@ -41,4 +41,4 @@ if [[ ! -x \"$python_path\" ]]; then
   tmux display-message -d 0 \"fzf-links: no executable python found at the location: $python_path\"
   exit 0
 fi
-$python_path \"$SCRIPT_DIR/fzf-links.py\" \"$history_limit\" \"$editor_open_cmd\" \"$browser_open_cmd\" \"$fzf_display_options\" \"$path_extension\" \"$loglevel\" \"$logfile\""
+PYTHONPATH=\"$SCRIPT_DIR\" \"$python_path\" -m tmux-fzf-links \"$history_limit\" \"$editor_open_cmd\" \"$browser_open_cmd\" \"$fzf_display_options\" \"$path_extension\" \"$loglevel\" \"$logfile\""
