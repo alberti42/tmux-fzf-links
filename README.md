@@ -1,4 +1,4 @@
-# tmux-fzf-links
+# 🚀 tmux-fzf-links
 
 **tmux-fzf-links** is a versatile tmux plugin that allows you to search for and open links directly from your terminal using fuzzy search powered by [fzf](https://github.com/junegunn/fzf). The plugin supports both default and user-defined schemes, offering unmatched flexibility and integration with tmux popup windows.
 
@@ -10,12 +10,11 @@ The default schemes include recognition of:
 - IP addresses (192.168.1.42:8000)
 - git addresses (e.g., `git@github.com:alberti42/dotfiles.git`)
 
-
 The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmux-fzf-url).
 
 ---
 
-## Features
+## 🌟 Features
 
 - **Fuzzy Search Links**: Quickly locate and open links appearing in your terminal output.
 - **Default and Custom Schemes**: Use pre-configured schemes or define your own with custom handlers for pre- and post-processing.
@@ -25,7 +24,7 @@ The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmu
 
 ---
 
-## Installation
+## 📦 Installation
 
 ### Prerequisites
 
@@ -37,23 +36,23 @@ The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmu
 
 Add the following to your `.zshrc`:
 
-'''zsh
+```zsh
 zinit load tmux-plugins/tmux-fzf-links
-'''
+```
 
 Alternatively, clone this repository and source the `fzf-links.tmux` file in your `.tmux.conf`:
 
-'''sh
+```sh
 git clone https://github.com/alberti42/tmux-fzf-links.git ~/.tmux/plugins/tmux-fzf-links
-'''
+```
 
 ---
 
-## Configuration
+## ⚙️ Configuration
 
 Default options are already provided. However, you can customize all options by adding the following lines to your `.tmux.conf`:
 
-'''tmux
+```tmux
 # === tmux-fzf-links ===
 set-option -g @fzf-links-key o
 set-option -g @fzf-links-history-limit 'screen'
@@ -68,13 +67,13 @@ set-option -g @fzf-links-python-path 'python3'
 set-option -g @fzf-links-user-schemes-path '~/.local/share/tmux-fzf-links/user_schemes.py'
 
 run-shell "~/.local/share/tmux-fzf-links/fzf-links.tmux"
-'''
+```
 
 Replace the placeholders with appropriate paths and commands for your environment.
 
 ---
 
-## Usage
+## 🖱️ Usage
 
 1. Start tmux.
 2. Press the configured key (default: `o` as for `open`) to activate **tmux-fzf-links**.
@@ -83,7 +82,7 @@ Replace the placeholders with appropriate paths and commands for your environmen
 
 ---
 
-## Defining Schemes
+## 🛠️ Defining Schemes
 
 ### Default Schemes
 
@@ -91,7 +90,7 @@ The plugin comes with built-in schemes for common patterns, including URLs, file
 
 Example:
 
-'''python
+```python
 default_schemes = {
     "<url>": {
         "opener": OpenerType.BROWSER,
@@ -106,13 +105,13 @@ default_schemes = {
         "post_handler": file_post_handler,
     },
 }
-'''
+```
 
 ### Adding Custom Schemes
 
 To extend functionality, define your own schemes in a separate file (e.g., `user_schemes.py`):
 
-'''python
+```python
 user_schemes = {
     "<ip>": {
         "opener": OpenerType.BROWSER,
@@ -121,13 +120,13 @@ user_schemes = {
         "post_handler": ip_post_handler,
     },
 }
-'''
+```
 
 Specify the path to your scheme file in the configuration.
 
 ---
 
-## Logging
+## 🔍 Logging
 
 Control logging levels via these options:
 
@@ -137,7 +136,7 @@ Control logging levels via these options:
 
 ---
 
-## Extensibility
+## 🧩 Extensibility
 
 The plugin's Python-based architecture enables advanced users to:
 
@@ -147,16 +146,18 @@ The plugin's Python-based architecture enables advanced users to:
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Please fork this repository and submit a pull request for enhancements or bug fixes, or simply report any issues in the [GitHub repository](https://github.com/alberti42/tmux-fzf-links/issues)
 
-## Donations
+## ❤️ Donations
+
 I would be grateful for any donation to support the development of this plugin.
 
 [<img src="images/buy_me_coffee.png" width=300 alt="Buy Me a Coffee QR Code"/>](https://buymeacoffee.com/alberti)
 
-## Author
+## 👨‍💻 Author
+
 - **Author:** Andrea Alberti
 - **GitHub Profile:** [alberti42](https://github.com/alberti42)
 - **Donations:** [![Buy Me a Coffee](https://img.shields.io/badge/Donate-Buy%20Me%20a%20Coffee-orange)](https://buymeacoffee.com/alberti)
@@ -164,6 +165,6 @@ I would be grateful for any donation to support the development of this plugin.
 
 ---
 
-## License
+## 📜 License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
