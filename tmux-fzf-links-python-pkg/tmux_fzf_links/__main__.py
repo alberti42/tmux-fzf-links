@@ -56,33 +56,35 @@ def set_up_logger(loglevel_tmux:str,loglevel_file:str,log_filename:str) -> loggi
     tmux_handler.setLevel(validate_log_level(loglevel_tmux))
     logger.addHandler(tmux_handler)
     
-    # Set up file log handler and check that the file is writable
-    try:
-        file_handler = setup_file_log_handler(log_filename)
-        file_handler.setLevel(validate_log_level(loglevel_file))
-        logger.addHandler(file_handler)
-        init_msg="fzf-links tmux plugin started"
-        # Send an initialization message to the file handler only
-        file_handler.handle(logging.LogRecord(
-                name=logger.name,
-                level=logging.INFO,
-                pathname=__file__,
-                lineno=0,
-                msg=init_msg,
-                args=None,
-                exc_info=None,
-            ))
-    except Exception as e:
-        # To be safe, remove the handler if it was added
-        for handler in logger.handlers:
-            if isinstance(handler,logging.FileHandler):
-                logger.removeHandler(handler)
-            
-        # Set level to zero to make sure that the error is displayed 
-        tmux_handler.setLevel(0)
-        # Log the error to tmux display and exit 
-        logger.error(f"error logging to logfile: {log_filename}")
-        sys.exit(1)
+    if log_filename:
+        # Set up file log handler in a safe way where it checks whether
+        # the file is writable; if not, the error is reported over tmux display 
+        try:
+            file_handler = setup_file_log_handler(log_filename)
+            file_handler.setLevel(validate_log_level(loglevel_file))
+            logger.addHandler(file_handler)
+            init_msg="fzf-links tmux plugin started"
+            # Send an initialization message to the file handler only
+            file_handler.handle(logging.LogRecord(
+                    name=logger.name,
+                    level=logging.INFO,
+                    pathname=__file__,
+                    lineno=0,
+                    msg=init_msg,
+                    args=None,
+                    exc_info=None,
+                ))
+        except Exception as e:
+            # To be safe, remove the handler if it was added
+            for handler in logger.handlers:
+                if isinstance(handler,logging.FileHandler):
+                    logger.removeHandler(handler)
+                
+            # Set level to zero to make sure that the error is displayed 
+            tmux_handler.setLevel(0)
+            # Log the error to tmux display and exit 
+            logger.error(f"error logging to logfile: {log_filename}")
+            sys.exit(1)
 
     return logger
 
