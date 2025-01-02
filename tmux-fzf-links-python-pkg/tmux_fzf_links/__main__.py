@@ -15,8 +15,11 @@ import importlib.util
 import pathlib
 from typing import override
 
-from .export import AppType, SchemeEntry
+from .export import OpenerType, SchemeEntry
 from .default_schemes import default_schemes
+
+class FailedChDir(Exception):
+    """Raise exception when changing directory to tmux pane current directory fails"""
 
 class FailedTmuxPaneHeight(Exception):
     """Raise exception when tmux pane height cannot be determined"""
@@ -258,39 +261,41 @@ def run_fzf(fzf_display_options:str,choices: list[str]) -> subprocess.CompletedP
     else:
         raise FzfError(f"fzf failed with exit code {result.returncode}: {result.stderr}", result.returncode)   
 
-def open_link(editor_open_cmd:str, browser_open_cmd:str, link:str, app_type:AppType):
+def open_link(editor_open_cmd:str, browser_open_cmd:str, post_handled_link:list[str], opener:OpenerType|str):
     """Open a link using the appropriate handler."""
 
     process: str | None = None
 
-    if app_type==AppType.EDITOR and editor_open_cmd:
+    if opener==OpenerType.EDITOR and editor_open_cmd:
         process = editor_open_cmd
-    elif app_type==AppType.BROWSER and browser_open_cmd:
+    elif opener==OpenerType.BROWSER and browser_open_cmd:
         process = browser_open_cmd
+    elif opener==OpenerType.CUSTOM:
+        process = None
     elif shutil.which("xdg-open"):
         process = "xdg-open"
     elif shutil.which("open"):
         process = "open"
-    elif app_type==AppType.EDITOR and "EDITOR" in os.environ:
+    elif opener==OpenerType.EDITOR and "EDITOR" in os.environ:
         process = os.environ["EDITOR"]
-    elif app_type==AppType.BROWSER and "BROWSER" in os.environ:
+    elif opener==OpenerType.BROWSER and "BROWSER" in os.environ:
         process = os.environ["BROWSER"]
-
-    if process is None:
+    else:
         raise NoSuitableAppFound("no suitable app was found to open the link")
 
     # Build the command
     
-    # Split the options into a list
-    cmd_plus_args: list[str] = shlex.split(link)
-
     # Add '{process}' as the first element
-    cmd_plus_args.insert(0, process)
+    if process:
+        post_handled_link.insert(0, process)
     
+    logger = logging.getLogger()
+    logger.debug(post_handled_link)
+
     try:
         # Run the command and capture stdout and stderr
         proc = subprocess.Popen(
-            cmd_plus_args,
+            post_handled_link,
             shell=False,  # Execute in the user's default shell
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -305,7 +310,7 @@ def open_link(editor_open_cmd:str, browser_open_cmd:str, link:str, app_type:AppT
             raise CommandFailed(f"return code {proc.returncode}: {stderr.decode('utf-8')}")
 
     except Exception as e:
-        raise CommandFailed(f"failed to execute command '{" ".join(cmd_plus_args)}': {e}")
+        raise CommandFailed(f"failed to execute command '{" ".join(post_handled_link)}': {e}")
 
 def run(
         history_limit:str='',
@@ -356,6 +361,18 @@ def run(
 
     # Find the maximum length in characters of the scheme labels
     max_len_scheme_names:int = max([len(scheme) for scheme in schemes.keys()])
+
+    try:
+        # Find pane current path
+        current_path = subprocess.check_output(
+            ('tmux', 'display', '-p', '#{pane_current_path}',),
+            shell=False,
+            text=True,
+        ).strip()
+        # Set current directory to pane current path
+        os.chdir(current_path)
+    except Exception as e:
+        raise FailedChDir(f"current directory could not be changed: {e}")
 
     # Process each scheme
     for scheme_type,scheme in schemes.items():
@@ -439,10 +456,10 @@ def run(
             if post_handler:
                 post_handled_link = post_handler(match)    
             else:
-                post_handled_link = match.group(0)
+                post_handled_link = [match.group(0)]
             
             try:
-                open_link(editor_open_cmd,browser_open_cmd,post_handled_link, schemes[scheme_type]["app_type"])
+                open_link(editor_open_cmd,browser_open_cmd,post_handled_link, schemes[scheme_type]["opener"])
             except (NoSuitableAppFound, PatternNotMatching, CommandFailed) as e:
                 logger.error(f"error: {e}")
                 continue
@@ -457,12 +474,8 @@ if __name__ == "__main__":
     try:
         run(*sys.argv[1:])
     except KeyboardInterrupt:
-        # root logger
-        root_logger=logging.getLogger()
-        if root_logger.handlers:
-            root_logger.info("script interrupted")
+        logging.info("script interrupted")
+    except FailedChDir as e:
+        logging.error(f"{e}")
     except Exception as e:
-        # root logger
-        root_logger=logging.getLogger()
-        if root_logger.handlers:
-            root_logger.error(f"unexpected runtime error: {e}")
+        logging.error(f"unexpected runtime error: {e}")
