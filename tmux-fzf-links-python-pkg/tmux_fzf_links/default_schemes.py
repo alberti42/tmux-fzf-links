@@ -21,11 +21,6 @@ default_schemes: dict[str, SchemeEntry] = {
         "post_handler": None,
         "pre_handler": None, "regex": re.compile(r"https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*")
         },
-    "IP": {
-        "app_type": AppType.BROWSER,
-        "post_handler": None,
-        "pre_handler": None, "regex": re.compile(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:[0-9]{1,5})?(/\S+)*")
-        },
     "GIT": {
         "app_type":AppType.BROWSER,
         "post_handler": git_handler,

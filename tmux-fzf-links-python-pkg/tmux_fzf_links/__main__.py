@@ -11,10 +11,12 @@ import sys
 import shlex
 import shutil
 import logging
+import importlib
+import pathlib
 from typing import override
 
-from .export import AppType
-from .DefaultSchemes import default_schemes
+from .export import AppType, SchemeEntry
+from .default_schemes import default_schemes
 
 class FailedTmuxPaneHeight(Exception):
     """Raise exception when tmux pane height cannot be determined"""
@@ -36,6 +38,50 @@ class FzfError(Exception):
     def __init__(self, message: str, returncode: int) -> None:
         super().__init__(message)
         self.returncode:int = returncode
+
+def set_up_logger(loglevel_tmux:str,loglevel_file:str,log_filename:str) -> logging.Logger:
+
+    # Set up the root logger; note: if you decide to create a child logger
+    # the root logger level needs to be configured to allow for messages
+    # to pass through.
+    logger = logging.getLogger()  # root logger when no argument is provided
+    # Allow all log messages to pass through; we control the level using handlers
+    logger.setLevel(0)
+
+    # Set up tmux log handler
+    tmux_handler = setup_tmux_log_handler()
+    tmux_handler.setLevel(validate_log_level(loglevel_tmux))
+    logger.addHandler(tmux_handler)
+    
+    # Set up file log handler and check that the file is writable
+    try:
+        file_handler = setup_file_log_handler(log_filename)
+        file_handler.setLevel(validate_log_level(loglevel_file))
+        logger.addHandler(file_handler)
+        init_msg="fzf-links tmux plugin started"
+        # Send an initialization message to the file handler only
+        file_handler.handle(logging.LogRecord(
+                name=logger.name,
+                level=logging.INFO,
+                pathname=__file__,
+                lineno=0,
+                msg=init_msg,
+                args=None,
+                exc_info=None,
+            ))
+    except Exception as e:
+        # To be safe, remove the handler if it was added
+        for handler in logger.handlers:
+            if isinstance(handler,logging.FileHandler):
+                logger.removeHandler(handler)
+            
+        # Set level to zero to make sure that the error is displayed 
+        tmux_handler.setLevel(0)
+        # Log the error to tmux display and exit 
+        logger.error(f"error logging to logfile: {log_filename}")
+        sys.exit(1)
+
+    return logger
 
 # >>> LOGGER >>>
 
@@ -111,6 +157,26 @@ def validate_log_level(user_level:str):
 
 # <<< LOGGER <<<
 
+def load_user_module(file_path: str):
+    """Dynamically load a Python module from the given file path."""
+    try:
+        # Ensure the file path is absolute
+        file_path = str(pathlib.Path(file_path).resolve())
+        
+        # Create a module spec
+        # pyright: ignore
+        spec = importlib.util.spec_from_file_location("user_schemes_module", file_path)
+        if spec and spec.loader:
+            # Create a new module based on the spec
+            user_module = importlib.util.module_from_spec(spec)
+            # Execute the module to populate its namespace
+            spec.loader.exec_module(user_module)
+            return getattr(user_module, "user_schemes", None)
+        else:
+            raise ImportError(f"Cannot create a module spec for {file_path}")
+    except Exception as e:
+        raise ImportError(f"Failed to load user module: {e}")
+
 def trim_str(s:str) -> str:
     """Trim leading and trailing spaces from a string."""
     return s.strip()
@@ -120,50 +186,6 @@ def remove_escape_sequences(text:str) -> str:
     ansi_escape_pattern = r'\x1B\[[0-9;]*[mK]'
     # Replace escape sequences with an empty string
     return re.sub(ansi_escape_pattern, '', text)
-
-def set_up_logger(loglevel_tmux:str,loglevel_file:str,log_filename:str) -> logging.Logger:
-
-    # Set up the root logger; note: if you decide to create a child logger
-    # the root logger level needs to be configured to allow for messages
-    # to pass through.
-    logger = logging.getLogger()  # root logger when no argument is provided
-    # Allow all log messages to pass through; we control the level using handlers
-    logger.setLevel(0)
-
-    # Set up tmux log handler
-    tmux_handler = setup_tmux_log_handler()
-    tmux_handler.setLevel(validate_log_level(loglevel_tmux))
-    logger.addHandler(tmux_handler)
-    
-    # Set up file log handler and check that the file is writable
-    try:
-        file_handler = setup_file_log_handler(log_filename)
-        file_handler.setLevel(validate_log_level(loglevel_file))
-        logger.addHandler(file_handler)
-        init_msg="fzf-links tmux plugin started"
-        # Send an initialization message to the file handler only
-        file_handler.handle(logging.LogRecord(
-                name=logger.name,
-                level=logging.INFO,
-                pathname=__file__,
-                lineno=0,
-                msg=init_msg,
-                args=None,
-                exc_info=None,
-            ))
-    except Exception as e:
-        # To be safe, remove the handler if it was added
-        for handler in logger.handlers:
-            if isinstance(handler,logging.FileHandler):
-                logger.removeHandler(handler)
-            
-        # Set level to zero to make sure that the error is displayed 
-        tmux_handler.setLevel(0)
-        # Log the error to tmux display and exit 
-        logger.error(f"error logging to logfile: {log_filename}")
-        sys.exit(1)
-
-    return logger
 
 def get_max_h_value(cmd_user_args:list[str]) -> int | None:
     if '-max-h' in cmd_user_args:
@@ -287,7 +309,8 @@ def run(
         path_extension:str='',
         loglevel_tmux:str='',
         loglevel_file:str='',
-        log_filename:str=''
+        log_filename:str='',
+        user_schemes_path:str=''
     ):
 
     # Set up the logger
@@ -319,7 +342,9 @@ def run(
     seen:set[str] = set()
     items:list[tuple[str,str]] = []
 
-    schemes = default_schemes
+    user_schemes:dict[str, SchemeEntry] = load_user_module(user_schemes_path)
+
+    schemes = {**default_schemes, **user_schemes}
 
     max_len_scheme_names:int = max([len(scheme) for scheme in schemes.keys()])
 
