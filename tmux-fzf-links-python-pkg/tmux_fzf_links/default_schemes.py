@@ -1,6 +1,7 @@
-import logging
 import re
+import sys
 from .export import OpenerType, SchemeEntry
+from os.path import expanduser
 from pathlib import Path
 
 def git_post_handler(match:re.Match[str]) -> list[str]:
@@ -16,9 +17,9 @@ def error_post_handler(match:re.Match[str]) -> list[str]:
     return [f"{file}:{line}"]
 
 def heuristic_find_file(file_path_str:str) -> Path | None:
-    # Expand tilde (~) to the user's home directory
-    file_path = Path(file_path_str).expanduser()
-    
+    # Expand tilde (~) to the user's home directory    
+    file_path = Path(expanduser(file_path_str))
+    file_path.expanduser
     # Check if the file exists either as is or relative to the current directory
     if file_path.exists():
         return file_path  # Return the absolute path
@@ -41,7 +42,14 @@ def file_pre_handler(match: re.Match[str]) -> str | None:
 
 def file_post_handler(match:re.Match[str]) -> list[str]:
     file_path_str = match.group(0)
-    return ['open','-R', str(heuristic_find_file(file_path_str))]
+    if sys.platform == "darwin":
+        return ['open','-R', str(heuristic_find_file(file_path_str))]
+    elif sys.platform == "linux":
+        return ['xdg-open', str(heuristic_find_file(file_path_str))]
+    elif sys.platform == "win32":
+        return ['explorer', str(heuristic_find_file(file_path_str))]
+    else:
+        raise Exception(f"platform {sys.platform} not supported")
 
 # Define schemes
 default_schemes: dict[str, SchemeEntry] = {
@@ -56,7 +64,7 @@ default_schemes: dict[str, SchemeEntry] = {
         "opener": OpenerType.CUSTOM,
         "post_handler": file_post_handler,
         "pre_handler": file_pre_handler,
-        "regex": re.compile(r"\~?[a-zA-Z0-9_\/\-]+\.[a-zA-Z0-9]+")
+        "regex": re.compile(r"\~?[a-zA-Z0-9_\/\-\:\.]+")
         },
     "<git>": {
         "opener":OpenerType.BROWSER,
@@ -69,7 +77,7 @@ default_schemes: dict[str, SchemeEntry] = {
         "post_handler": error_post_handler,
         "pre_handler": None,
         "regex": re.compile(r"File \"(?P<file>...*?)\"\, line (?P<line>[0-9]+)")
-        }
+        },
     }
 
 __all__ = ["default_schemes"]

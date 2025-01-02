@@ -2,15 +2,11 @@ import re
 from tmux_fzf_links.export import OpenerType, SchemeEntry
 
 def ip_pre_handler(match:re.Match[str]) -> str | None:
-    if not match.group("uri"):
-        # keep the match only if no `https?://` precedes the IP address
-        return f"{match.group("ip")}"
-    else:
-        # drop the match
-        return None
+    return match.group("ip")
 
 def ip_post_handler(match:re.Match[str]) -> list[str]:
-    return [f"https://{match.group(0)}"]
+    ip_addr_str = match.group("ip")
+    return [f"https://{ip_addr_str}"]
 
 # Define schemes
 user_schemes: dict[str, SchemeEntry] = {
@@ -18,8 +14,7 @@ user_schemes: dict[str, SchemeEntry] = {
         "opener": OpenerType.BROWSER,
         "post_handler": ip_post_handler,
         "pre_handler": ip_pre_handler,
-        "regex": re.compile(r"(?P<uri>https?://)?(?P<ip>[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(\S+))")
-        # [0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:[0-9]{1,5})?(/\S+)*
+        "regex": re.compile(r"([\'\" \t\{\[\(\~])(?P<ip>[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}[^ \t\)\]\}\"\'\n]+)")
         },
     }
 
