@@ -354,24 +354,26 @@ def run(
     # Merge both schemes giving precedence to user schemes
     schemes = {**default_schemes, **user_schemes}
 
+    # Find the maximum length in characters of the scheme labels
     max_len_scheme_names:int = max([len(scheme) for scheme in schemes.keys()])
 
     # Process each scheme
     for scheme_type,scheme in schemes.items():
         # Use regex.finditer to iterate over all matches
         for match in scheme['regex'].finditer(content):
+            entire_match = match.group(0)
             # Extract the match string
-            matched_text = match.group(0)  # Group 0 contains the entire match
             if scheme['pre_handler']:
                 pre_handled_text = scheme['pre_handler'](match)
             else:
-                pre_handled_text = matched_text
-            if matched_text not in seen:
-                seen.add(matched_text)
+                pre_handled_text = entire_match 
+            # Drop matches for which the pre_handler returns None
+            if pre_handled_text and entire_match not in seen:
+                seen.add(entire_match)
                 # We justify the scheme name for prettier print
                 justified_scheme_type=scheme_type.ljust(max_len_scheme_names)
                 # We keep a copy of the original matched text for later
-                items.append((justified_scheme_type + "  " + pre_handled_text,matched_text,))
+                items.append((justified_scheme_type + "  " + pre_handled_text,entire_match,))
     # Clean up no longer needed variables
     del seen
 

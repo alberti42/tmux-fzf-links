@@ -22,6 +22,7 @@
                     "basedpyright.analysis.extraPaths": [
                         "/Applications/Sublime Text.app/Contents/MacOS/Lib/python3.8.zip",
                         "/Applications/Sublime Text.app/Contents/MacOS/Lib/python38",
+                        "~/.local/share/zinit/plugins/tmux-plugins---tmux-fzf-links/tmux-fzf-links-python-pkg"
                     ],
                     "basedpyright.analysis.typeCheckingMode": "basic",
                     "basedpyright.analysis.reportOptionalSubscript": "error"

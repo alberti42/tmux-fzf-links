@@ -16,18 +16,23 @@ def error_handler(match:re.Match[str]) -> str:
 # Define schemes
 default_schemes: dict[str, SchemeEntry] = {
     # One can use group names as done in the scheme ERROR to extract subblocks, which are availble to the pre_handler and post_handler
-    "URL": {
+    "<url>": {
         "app_type": AppType.BROWSER,
         "post_handler": None,
         "pre_handler": None, "regex": re.compile(r"https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*")
         },
-    "GIT": {
+    "<file>": {
+        "app_type": AppType.BROWSER,
+        "post_handler": None,
+        "pre_handler": None, "regex": re.compile(r"https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*")
+        },
+    "<git>": {
         "app_type":AppType.BROWSER,
         "post_handler": git_handler,
         "pre_handler": None,
         "regex": re.compile(r"(ssh://)?git@\S*")
         },
-    "ERROR": {
+    "<error>": {
         "app_type": AppType.EDITOR,
         "post_handler": error_handler,
         "pre_handler": None, "regex": re.compile(r"File \"(?P<file>...*?)\"\, line (?P<line>[0-9]+)")
