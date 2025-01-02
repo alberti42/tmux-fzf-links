@@ -11,7 +11,7 @@ import sys
 import shlex
 import shutil
 import logging
-import importlib
+import importlib.util
 import pathlib
 from typing import override
 
@@ -157,21 +157,27 @@ def validate_log_level(user_level:str):
 
 # <<< LOGGER <<<
 
-def load_user_module(file_path: str):
+def load_user_module(file_path: str) -> dict[str, SchemeEntry]:
     """Dynamically load a Python module from the given file path."""
     try:
         # Ensure the file path is absolute
         file_path = str(pathlib.Path(file_path).resolve())
         
         # Create a module spec
-        # pyright: ignore
         spec = importlib.util.spec_from_file_location("user_schemes_module", file_path)
         if spec and spec.loader:
             # Create a new module based on the spec
             user_module = importlib.util.module_from_spec(spec)
             # Execute the module to populate its namespace
             spec.loader.exec_module(user_module)
-            return getattr(user_module, "user_schemes", None)
+            
+            # Retrieve the user_schemes attribute
+            user_schemes = getattr(user_module, "user_schemes", None)
+            
+            if user_schemes is None or not isinstance(user_schemes, dict):
+                raise TypeError(f"'user_schemes' must be a dictionary, got {type(user_schemes)}")
+            
+            return user_schemes
         else:
             raise ImportError(f"Cannot create a module spec for {file_path}")
     except Exception as e:
@@ -342,8 +348,10 @@ def run(
     seen:set[str] = set()
     items:list[tuple[str,str]] = []
 
+    # Load user schemes
     user_schemes:dict[str, SchemeEntry] = load_user_module(user_schemes_path)
 
+    # Merge both schemes giving precedence to user schemes
     schemes = {**default_schemes, **user_schemes}
 
     max_len_scheme_names:int = max([len(scheme) for scheme in schemes.keys()])
