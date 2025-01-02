@@ -4,8 +4,8 @@
 
 The default schemes include recognition of:
 
-- local files wih relative and absolute paths (192.168.1.42:8000)
-- Python code error, recognizing the line where the error was generated
+- local files with relative and absolute paths (192.168.1.42:8000)
+- Python code error where it recognizes the line at which the error was generated
 - web addresses (e.g. https://...)
 - IP addresses (192.168.1.42:8000)
 - git addresses (e.g., `git@github.com:alberti42/dotfiles.git`)
