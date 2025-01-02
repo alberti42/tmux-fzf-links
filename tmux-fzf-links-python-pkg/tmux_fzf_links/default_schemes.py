@@ -32,7 +32,7 @@ def file_pre_handler(match: re.Match[str]) -> str | None:
     
     # Return the fully resolved path
     resolved_path = heuristic_find_file(file_path_str)
-    logging.debug(f"MATCH:{file_path_str}\nPATH: {resolved_path}")
+    
     if resolved_path:
         # TODO: add ls_colors
         return str(resolved_path)
