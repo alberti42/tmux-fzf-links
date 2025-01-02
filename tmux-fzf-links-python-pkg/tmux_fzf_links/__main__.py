@@ -291,9 +291,6 @@ def open_link(editor_open_cmd:str, browser_open_cmd:str, post_handled_link:list[
     if process:
         post_handled_link.insert(0, process)
     
-    logger = logging.getLogger()
-    logger.debug(post_handled_link)
-
     try:
         # Run the command and capture stdout and stderr
         proc = subprocess.Popen(
