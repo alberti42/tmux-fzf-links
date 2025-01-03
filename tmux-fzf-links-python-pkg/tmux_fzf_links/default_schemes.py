@@ -1,4 +1,3 @@
-import logging
 import re
 import sys
 from os.path import expanduser
@@ -37,7 +36,7 @@ def file_pre_handler(match: re.Match[str]) -> str | None:
     
     if resolved_path:
         # TODO: add ls_colors
-        color_code=get_file_color(resolved_path.name)
+        color_code=get_file_color(resolved_path)
         if color_code:
             return f"\033[{color_code}m{str(resolved_path)}\033[0m"
         else:

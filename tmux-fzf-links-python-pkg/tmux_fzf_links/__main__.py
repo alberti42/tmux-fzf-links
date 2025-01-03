@@ -4,6 +4,7 @@
 #   Author: (c) 2024 Andrea Alberti
 #===============================================================================
 
+from operator import truediv
 import os
 import re
 import subprocess
@@ -12,7 +13,7 @@ import shlex
 import logging
 import importlib.util
 import pathlib
-from .ls_colors import configure_ls_colors
+from .ls_colors import configure_ls_colors_from_env, configure_ls_colors_from_file
 from typing import override
 
 from .opener import open_link, SchemeEntry
@@ -213,7 +214,7 @@ def get_max_h_value(cmd_user_args:list[str]) -> int | None:
         # Parameter '-max-h' is not defined
         return None
 
-def run_fzf(fzf_display_options:str,choices: list[str]) -> subprocess.CompletedProcess[str]:
+def run_fzf(fzf_display_options:str,choices: list[str],use_ls_colors:bool) -> subprocess.CompletedProcess[str]:
     """Run fzf with the given options."""
 
     # Split the options into a list
@@ -226,7 +227,10 @@ def run_fzf(fzf_display_options:str,choices: list[str]) -> subprocess.CompletedP
         height=max(min(height,max_h_value),5)
     
     # Set a list of default argument, which are computed dynamically
-    cmd_default_args = ['-h',f'{height:d}']
+    cmd_default_args = []
+    if use_ls_colors:
+        cmd_default_args.extend(['--ansi'])
+    cmd_default_args.extend(['-h',f'{height:d}'])
 
     # In this order, user arguments take priority over default arguments
     cmd_args = ['fzf-tmux'] + cmd_default_args + cmd_user_args
@@ -249,6 +253,7 @@ def run(
         loglevel_tmux:str='',
         loglevel_file:str='',
         log_filename:str='',
+        use_ls_colors_str:str='',
         ls_colors_filename:str='',
         user_schemes_path:str=''
     ):
@@ -261,11 +266,19 @@ def run(
         os.environ["PATH"] = f"{path_extension}:{os.environ['PATH']}"
 
     # Configure LS_COLORS
-    if ls_colors_filename:
-        try:
-            configure_ls_colors(ls_colors_filename)
-        except LsColorsNotConfigured as e:
-            logger.warning(f"{e}")
+    if use_ls_colors_str and use_ls_colors_str=='on':
+        use_ls_colors = True
+    else:
+        use_ls_colors = False
+
+    if use_ls_colors:
+        if ls_colors_filename:
+            try:
+                configure_ls_colors_from_file(ls_colors_filename)
+            except LsColorsNotConfigured as e:
+                logger.warning(f"{e}")
+        else:
+            configure_ls_colors_from_env()
 
     # Capture tmux content
     capture_str:list[str]=['tmux', 'capture-pane', '-J', '-p', '-e']
@@ -343,12 +356,12 @@ def run(
     sorted_choices = sorted(items, key=lambda x: x[0])
 
     # Number the items
-    numbered_choices = [f"{idx:3d}  {item[0]}" for idx, item in enumerate(sorted_choices, 1)]
+    numbered_choices = [f"{idx:4d}  {item[0]}" for idx, item in enumerate(sorted_choices, 1)]
 
     # Run fzf and get selected items
     try:
         # Run fzf and get selected items
-        result = run_fzf(fzf_display_options,numbered_choices)
+        result = run_fzf(fzf_display_options,numbered_choices,use_ls_colors)
     except FzfError as e:
         logger.error(f"error: unexpected error: {e}")
         sys.exit(1)
