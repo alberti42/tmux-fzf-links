@@ -1,8 +1,9 @@
+import logging
 import re
 import sys
-from .export import OpenerType, SchemeEntry
 from os.path import expanduser
 from pathlib import Path
+from .export import OpenerType, SchemeEntry, get_file_color
 
 def git_post_handler(match:re.Match[str]) -> list[str]:
     return [f"https://github.com/{match.group(0)}"]
@@ -36,7 +37,11 @@ def file_pre_handler(match: re.Match[str]) -> str | None:
     
     if resolved_path:
         # TODO: add ls_colors
-        return str(resolved_path)
+        color_code=get_file_color(resolved_path.name)
+        if color_code:
+            return f"\033[{color_code}m{str(resolved_path)}\033[0m"
+        else:
+            return str(resolved_path)
     else:
         return None
 

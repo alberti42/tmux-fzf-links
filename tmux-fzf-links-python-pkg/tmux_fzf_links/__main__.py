@@ -9,38 +9,15 @@ import re
 import subprocess
 import sys
 import shlex
-import shutil
 import logging
 import importlib.util
 import pathlib
+from .ls_colors import configure_ls_colors
 from typing import override
 
-from .export import OpenerType, SchemeEntry
+from .opener import open_link, SchemeEntry
+from .errors_types import CommandFailed, FailedChDir, FailedTmuxPaneHeight, FzfError, FzfUserInterrupt, NoSuitableAppFound, PatternNotMatching, LsColorsNotConfigured
 from .default_schemes import default_schemes
-
-class FailedChDir(Exception):
-    """Raise exception when changing directory to tmux pane current directory fails"""
-
-class FailedTmuxPaneHeight(Exception):
-    """Raise exception when tmux pane height cannot be determined"""
-
-class PatternNotMatching(Exception):
-    """Raise exception when the pattern does not match a string already matched"""
-
-class NoSuitableAppFound(Exception):
-    """Raise exception when no suitable app was found to open the link"""
-
-class CommandFailed(Exception):
-    """Raise exception when the executed app exits with a nonzero return code"""
-
-class FzfUserInterrupt(Exception):
-    """Raise exception when the user cancels fzf modal window"""
-
-class FzfError(Exception):
-    """Raise exception when fzf fails"""
-    def __init__(self, message: str, returncode: int) -> None:
-        super().__init__(message)
-        self.returncode:int = returncode
 
 def set_up_logger(loglevel_tmux:str,loglevel_file:str,log_filename:str) -> logging.Logger:
 
@@ -263,54 +240,6 @@ def run_fzf(fzf_display_options:str,choices: list[str]) -> subprocess.CompletedP
     else:
         raise FzfError(f"fzf failed with exit code {result.returncode}: {result.stderr}", result.returncode)   
 
-def open_link(editor_open_cmd:str, browser_open_cmd:str, post_handled_link:list[str], opener:OpenerType|str):
-    """Open a link using the appropriate handler."""
-
-    process: str | None = None
-
-    if opener==OpenerType.EDITOR and editor_open_cmd:
-        process = editor_open_cmd
-    elif opener==OpenerType.BROWSER and browser_open_cmd:
-        process = browser_open_cmd
-    elif opener==OpenerType.CUSTOM:
-        process = None
-    elif shutil.which("xdg-open"):
-        process = "xdg-open"
-    elif shutil.which("open"):
-        process = "open"
-    elif opener==OpenerType.EDITOR and "EDITOR" in os.environ:
-        process = os.environ["EDITOR"]
-    elif opener==OpenerType.BROWSER and "BROWSER" in os.environ:
-        process = os.environ["BROWSER"]
-    else:
-        raise NoSuitableAppFound("no suitable app was found to open the link")
-
-    # Build the command
-    
-    # Add '{process}' as the first element
-    if process:
-        post_handled_link.insert(0, process)
-    
-    try:
-        # Run the command and capture stdout and stderr
-        proc = subprocess.Popen(
-            post_handled_link,
-            shell=False,  # Execute in the user's default shell
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=False,  # Decode output to strings
-        )
-
-        # Communicate to capture output and error
-        _, stderr = proc.communicate()
-
-        # Check for errors or unexpected output
-        if proc.returncode != 0:
-            raise CommandFailed(f"return code {proc.returncode}: {stderr.decode('utf-8')}")
-
-    except Exception as e:
-        raise CommandFailed(f"failed to execute command '{" ".join(post_handled_link)}': {e}")
-
 def run(
         history_limit:str='',
         editor_open_cmd:str='',
@@ -320,6 +249,7 @@ def run(
         loglevel_tmux:str='',
         loglevel_file:str='',
         log_filename:str='',
+        ls_colors_filename:str='',
         user_schemes_path:str=''
     ):
 
@@ -330,9 +260,15 @@ def run(
     if path_extension and path_extension not in os.environ["PATH"]:
         os.environ["PATH"] = f"{path_extension}:{os.environ['PATH']}"
 
+    # Configure LS_COLORS
+    if ls_colors_filename:
+        try:
+            configure_ls_colors(ls_colors_filename)
+        except LsColorsNotConfigured as e:
+            logger.warning(f"{e}")
+
     # Capture tmux content
     capture_str:list[str]=['tmux', 'capture-pane', '-J', '-p', '-e']
-
     if history_limit != "screen":
         # It the history limit is not set to screen, then so many extra
         # lines are captured from the buffer history
@@ -344,6 +280,8 @@ def run(
             text=True,
         )
 
+    logging.debug(os.environ)
+
     # Remove escape sequences
     content=remove_escape_sequences(content)
 
@@ -353,8 +291,12 @@ def run(
     items:list[tuple[str,str]] = []
 
     # Load user schemes
-    user_schemes:dict[str, SchemeEntry] = load_user_module(user_schemes_path)
-
+    user_schemes:dict[str, SchemeEntry]
+    if user_schemes_path:
+        user_schemes = load_user_module(user_schemes_path)
+    else:
+        user_schemes = {}
+    
     # Merge both schemes giving precedence to user schemes
     schemes = {**default_schemes, **user_schemes}
 
