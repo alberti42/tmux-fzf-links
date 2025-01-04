@@ -13,11 +13,11 @@ import importlib.util
 import pathlib
 
 from tmux_fzf_links.fzf_handler import run_fzf
-from .colors import configure_ls_colors_from_env, configure_ls_colors_from_file, enable_colors, reset_color, rgb_color
+from .colors import colors
 from typing import override
 
 from .opener import open_link, SchemeEntry
-from .errors_types import CommandFailed, FailedChDir, FailedTmuxPaneHeight, FzfError, FzfUserInterrupt, NoSuitableAppFound, PatternNotMatching, LsColorsNotConfigured
+from .errors_types import CommandFailed, FailedChDir, FzfError, FzfUserInterrupt, NoSuitableAppFound, PatternNotMatching, LsColorsNotConfigured
 from .default_schemes import default_schemes
 
 def set_up_logger(loglevel_tmux:str,loglevel_file:str,log_filename:str) -> logging.Logger:
@@ -140,7 +140,7 @@ def validate_log_level(user_level:str):
 
 # <<< LOGGER <<<
 
-def load_user_module(file_path: str) -> dict[str, SchemeEntry]:
+def load_user_module(file_path: str) -> list[SchemeEntry]:
     """Dynamically load a Python module from the given file path."""
     try:
         # Ensure the file path is absolute
@@ -157,14 +157,14 @@ def load_user_module(file_path: str) -> dict[str, SchemeEntry]:
             # Retrieve the user_schemes attribute
             user_schemes = getattr(user_module, "user_schemes", None)
             
-            if user_schemes is None or not isinstance(user_schemes, dict):
-                raise TypeError(f"'user_schemes' must be a dictionary, got {type(user_schemes)}")
+            if user_schemes is None or not isinstance(user_schemes, list):
+                raise TypeError(f"'user_schemes' must be a list, got {type(user_schemes)}")
             
             return user_schemes
         else:
-            raise ImportError(f"Cannot create a module spec for {file_path}")
+            raise ImportError(f"cannot create a module spec for {file_path}")
     except Exception as e:
-        raise ImportError(f"Failed to load user module: {e}")
+        raise ImportError(f"failed to load user module: {e}")
 
 def trim_str(s:str) -> str:
     """Trim leading and trailing spaces from a string."""
@@ -204,15 +204,15 @@ def run(
         use_ls_colors = False
 
     if use_ls_colors:
-        enable_colors()
+        colors.enable_colors(True)
 
         if ls_colors_filename:
             try:
-                configure_ls_colors_from_file(ls_colors_filename)
+                colors.configure_ls_colors_from_file(ls_colors_filename)
             except LsColorsNotConfigured as e:
                 logger.warning(f"{e}")
         else:
-            configure_ls_colors_from_env()
+            colors.configure_ls_colors_from_env()
 
     # Capture tmux content
     capture_str:list[str]=['tmux', 'capture-pane', '-J', '-p', '-e']
@@ -236,17 +236,25 @@ def run(
     items:list[tuple[str,str]] = []
 
     # Load user schemes
-    user_schemes:dict[str, SchemeEntry]
+    user_schemes:list[SchemeEntry]
     if user_schemes_path:
         user_schemes = load_user_module(user_schemes_path)
     else:
-        user_schemes = {}
+        user_schemes = []
     
     # Merge both schemes giving precedence to user schemes
-    schemes = {**default_schemes, **user_schemes}
+    schemes = [*default_schemes, *user_schemes]
+
+    # Create the new dictionary mapping aliases to indexes
+    alias_to_index = {
+        alias: index
+        for index, scheme in enumerate(schemes)
+        for aliases in [scheme.get("aliases", [])]  # Retrieve aliases once
+        for alias in ([aliases] if isinstance(aliases, str) else aliases)
+    }
 
     # Find the maximum length in characters of the scheme labels
-    max_len_scheme_names:int = max([len(scheme) for scheme in schemes.keys()])
+    max_len_scheme_names:int = max([len(scheme) for scheme in alias_to_index.keys()])
 
     try:
         # Find pane current path
@@ -261,7 +269,8 @@ def run(
         raise FailedChDir(f"current directory could not be changed: {e}")
 
     # Process each scheme
-    for scheme_type,scheme in schemes.items():
+    for scheme_type,index_scheme in alias_to_index.items():
+        scheme = schemes[index_scheme]
         # Use regex.finditer to iterate over all matches
         for match in scheme['regex'].finditer(content):
             entire_match = match.group(0)
@@ -284,13 +293,15 @@ def run(
         logger.info('no link found')
         return
 
-    # Sort items
+    # Sort items; it is better not to sort the matches alphabetically if we want to preserve
+    # the same order of appearance on the screen. For now, this possibility is disabled. We could
+    # enable it later by providing an option for the user to decide.
     # sorted_choices = sorted(items, key=lambda x: x[0])
     sorted_choices = items
     sorted_choices.reverse()
 
     # Number the items
-    numbered_choices = [f"{rgb_color(130,130,130)}{idx:4d}  {item[0]}{reset_color}" for idx, item in enumerate(sorted_choices, 1)]
+    numbered_choices = [f"{colors.tag_color}{idx:4d}{colors.reset_color}  {item[0]}" for idx, item in enumerate(sorted_choices, 1)]
 
     # Run fzf and get selected items
     try:
@@ -326,11 +337,13 @@ def run(
                 logger.error(f"error: malformed selection: {selected_choice}")
                 continue
             
-            scheme = schemes.get(scheme_type,None)
+            index_scheme = alias_to_index.get(scheme_type,None)
             
-            if scheme is None:
+            if index_scheme is None:
                 logger.error(f"error: malformed selection: {selected_choice}")
                 continue
+
+            scheme=schemes[index_scheme]
 
             match=scheme["regex"].search(selected_item)
             if match is None:
@@ -347,7 +360,7 @@ def run(
                 post_handled_link = [match.group(0)]
             
             try:
-                open_link(editor_open_cmd,browser_open_cmd,post_handled_link, schemes[scheme_type]["opener"])
+                open_link(editor_open_cmd,browser_open_cmd,post_handled_link, schemes[index_scheme]["opener"])
             except (NoSuitableAppFound, PatternNotMatching, CommandFailed) as e:
                 logger.error(f"error: {e}")
                 continue

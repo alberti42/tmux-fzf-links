@@ -31,7 +31,7 @@ loglevel_tmux=$(tmux_get '@fzf-links-loglevel-tmux' 'WARNING')
 loglevel_file=$(tmux_get '@fzf-links-loglevel-file' 'WARNING')
 log_filename=$(tmux_get '@fzf-links-log-filename' '')
 python_path=$(tmux_get '@fzf-links-python-path' 'python3')
-use_ls_colors=$(tmux_get '@fzf-links-use-ls-colors' 'on')
+use_colors=$(tmux_get '@fzf-links-use-colors' 'on')
 ls_colors_filename=$(tmux_get '@fzf-links-ls-colors-filename' '')
 user_schemes_path=$(tmux_get '@fzf-links-user-schemes-path' '')
 
@@ -48,5 +48,5 @@ if [[ ! -x \"$python_path\" ]]; then
   tmux display-message -d 0 \"fzf-links: no executable python found at the location: $python_path\"
   exit 0
 fi
-PYTHONPATH=\"$SCRIPT_DIR/tmux-fzf-links-python-pkg\" \"$python_path\" -m tmux_fzf_links \"$history_limit\" \"$editor_open_cmd\" \"$browser_open_cmd\" \"$fzf_display_options\" \"$path_extension\" \"$loglevel_tmux\" \"$loglevel_file\" \"$log_filename\" \"$user_schemes_path\" \"$use_ls_colors\" \"$ls_colors_filename\"
+PYTHONPATH=\"$SCRIPT_DIR/tmux-fzf-links-python-pkg\" \"$python_path\" -m tmux_fzf_links \"$history_limit\" \"$editor_open_cmd\" \"$browser_open_cmd\" \"$fzf_display_options\" \"$path_extension\" \"$loglevel_tmux\" \"$loglevel_file\" \"$log_filename\" \"$user_schemes_path\" \"$use_colors\" \"$ls_colors_filename\"
 "

@@ -16,6 +16,7 @@ class OpenerType(Enum):
 
 # Define the structure of each scheme entry
 class SchemeEntry(TypedDict):
+    aliases: str | tuple[str,...]
     opener: OpenerType
     pre_handler:Callable[[re.Match[str]], str | None] | None  # A function that takes a string and returns a string
     post_handler: Callable[[re.Match[str]], list[str]] | None  # A function that takes a string and returns a string

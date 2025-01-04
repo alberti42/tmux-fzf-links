@@ -3,7 +3,7 @@ import sys
 import logging
 from os.path import expanduser
 from pathlib import Path
-from .export import OpenerType, SchemeEntry, get_file_color, rgb_color, reset_color
+from .export import OpenerType, SchemeEntry, colors
 
 def git_post_handler(match:re.Match[str]) -> list[str]:
     return [f"https://github.com/{match.group(0)}"]
@@ -48,7 +48,7 @@ def file_pre_handler(match: re.Match[str]) -> str | None:
     resolved_path = heuristic_find_file(file_path_str)
     
     if resolved_path:
-        color_code=get_file_color(resolved_path)
+        color_code=colors.get_file_color(resolved_path)
         if color_code:
             return f"\033[{color_code}m{str(resolved_path)}\033[0m"
         else:
@@ -68,32 +68,36 @@ def file_post_handler(match:re.Match[str]) -> list[str]:
         raise Exception(f"platform {sys.platform} not supported")
 
 # Define schemes
-default_schemes: dict[str, SchemeEntry] = {
+default_schemes: list[SchemeEntry] = [
     # One can use group names as done in the scheme ERROR to extract subblocks, which are availble to the pre_handler and post_handler
-    "[url]": {
-        "opener": OpenerType.BROWSER,
-        "post_handler": None,
-        "pre_handler": lambda m: f"{rgb_color(200,0,255)}{m.group(0)}{reset_color}",
-        "regex": re.compile(r"https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*")
+         {
+            "aliases": "url",
+            "opener": OpenerType.BROWSER,
+            "post_handler": None,
+            "pre_handler": lambda m: f"{colors.rgb_color(200,0,255)}{m.group(0)}{colors.reset_color}",
+            "regex": re.compile(r"https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*")
         },
-    "[file/dir]": {
-        "opener": OpenerType.CUSTOM,
-        "post_handler": file_post_handler,
-        "pre_handler": file_pre_handler,
-        "regex": re.compile(r"(\'(?P<link1>\~?[a-zA-Z0-9_\/\-\:\. ]+)\'|(?P<link2>\~?[a-zA-Z0-9_\/\-\:\.]+))")
+        {
+            "aliases": ("file","directory"),
+            "opener": OpenerType.CUSTOM,
+            "post_handler": file_post_handler,
+            "pre_handler": file_pre_handler,
+            "regex": re.compile(r"(\'(?P<link1>\~?[a-zA-Z0-9_\/\-\:\. ]+)\'|(?P<link2>\~?[a-zA-Z0-9_\/\-\:\.]+))")
         },
-    "[git]": {
-        "opener":OpenerType.BROWSER,
-        "post_handler": git_post_handler,
-        "pre_handler": lambda m: f"{rgb_color(0,255,115)}{m.group(0)}{reset_color}",
-        "regex": re.compile(r"(ssh://)?git@\S*")
+        {
+            "aliases": "git",
+            "opener":OpenerType.BROWSER,
+            "post_handler": git_post_handler,
+            "pre_handler": lambda m: f"{colors.rgb_color(0,255,115)}{m.group(0)}{colors.reset_color}",
+            "regex": re.compile(r"(ssh://)?git@\S*")
         },
-    "[error]": {
-        "opener": OpenerType.EDITOR,
-        "post_handler": error_post_handler,
-        "pre_handler": lambda m: f"{rgb_color(255,0,0)}{m.group("file")}, line {m.group("line")}{reset_color}",
-        "regex": re.compile(r"File \"(?P<file>...*?)\"\, line (?P<line>[0-9]+)")
+        {
+            "aliases": "error",
+            "opener": OpenerType.EDITOR,
+            "post_handler": error_post_handler,
+            "pre_handler": lambda m: f"{colors.rgb_color(255,0,0)}{m.group("file")}, line {m.group("line")}{colors.reset_color}",
+            "regex": re.compile(r"File \"(?P<file>...*?)\"\, line (?P<line>[0-9]+)")
         },
-    }
+    ]
 
 __all__ = ["default_schemes"]
