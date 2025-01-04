@@ -1,21 +1,28 @@
+#===============================================================================
+#   Author: (c) 2024 Andrea Alberti
+#===============================================================================
+
 import shlex
 from .errors_types import FailedTmuxPaneHeight, FzfError, FzfUserInterrupt
 import subprocess
 
-def get_max_h_value(cmd_user_args:list[str]) -> int | None:
-    if '-max-h' in cmd_user_args:
+def get_maxnum_displayed(cmd_user_args:list[str]) -> int | None:
+    # get the user option defining the maximum number of matches to be
+    # displayed simultaneously in the fzf window
+
+    if '--maxnum-displayed' in cmd_user_args:
         try:
-            # Find the index of '-max-h' and get the next argument
-            max_h_index = cmd_user_args.index('-max-h')
-            max_h_arg = cmd_user_args[max_h_index + 1]
+            # Find the index of '--maxnum-displayed' and get the next argument
+            maxnum_index = cmd_user_args.index('--maxnum-displayed')
+            maxnum_arg = cmd_user_args[maxnum_index + 1]
 
-            # Remove '-max-h' and its argument
-            cmd_user_args.pop(max_h_index)  # Remove '-max-h'
-            cmd_user_args.pop(max_h_index)  # Remove the argument (shifts due to first pop)
+            # Remove '--maxnum-displayed' and its argument
+            cmd_user_args.pop(maxnum_index)  # Remove '--maxnum-displayed'
+            cmd_user_args.pop(maxnum_index)  # Remove the argument (shifts due to first pop)
 
-            if max_h_arg.endswith('%'):
+            if maxnum_arg.endswith('%'):
                 # Convert percentage to an integer based on pane_height
-                percentage = int(max_h_arg[:-1])  # Remove '%' and convert to int
+                percentage = int(maxnum_arg[:-1])  # Remove '%' and convert to int
 
                 try:
                     pane_height_str = subprocess.check_output(
@@ -27,17 +34,17 @@ def get_max_h_value(cmd_user_args:list[str]) -> int | None:
                 except Exception as e:
                     raise FailedTmuxPaneHeight(f"tmux pane height could not be determined: {e}")
                 
-                max_h_value = pane_height * percentage // 100
+                maxnum_value = pane_height * percentage // 100
             else:
                 # Convert the argument directly to an integer
-                max_h_value = int(max_h_arg)
+                maxnum_value = int(maxnum_arg)
 
-            return max_h_value
+            return maxnum_value
         except (IndexError, ValueError):
-            # Handle missing or invalid value for '-max-h'
-            raise FailedTmuxPaneHeight("option '-max-h' is defined but its value is missing or invalid.")
+            # Handle missing or invalid value for '--maxnum-displayed'
+            raise FailedTmuxPaneHeight("option '--maxnum-displayed' is defined but its value is missing or invalid.")
     else:
-        # Parameter '-max-h' is not defined
+        # Parameter '--maxnum-displayed' is not defined
         return None
 
 def run_fzf(fzf_display_options:str,choices: list[str],use_ls_colors:bool) -> subprocess.CompletedProcess[str]:
@@ -45,15 +52,17 @@ def run_fzf(fzf_display_options:str,choices: list[str],use_ls_colors:bool) -> su
 
     # Split the options into a list
     cmd_user_args: list[str] = shlex.split(fzf_display_options)
-    max_h_value = get_max_h_value(cmd_user_args)
+
+    # Get the maximum number of matches to be displayed at once in the fzf window
+    maxnum_value = get_maxnum_displayed(cmd_user_args)
 
     # Compute the required height
-    height=len(choices)+4 # number of lines
-    if max_h_value:
-        height=max(min(height,max_h_value),5)
-    
+    height=len(choices) # number of lines
+    if maxnum_value:
+        height=max(min(len(choices),maxnum_value),1)
+
     # Set a list of default argument, which are computed dynamically
-    cmd_default_args = ['-h',f'{height:d}','--no-sort']
+    cmd_default_args = ['-h',f'{height+4:d}','--no-sort']  # extend by 4 lines because of the fzf border
     if use_ls_colors:
         cmd_default_args.append('--ansi')
     

@@ -1,3 +1,13 @@
+#===============================================================================
+#   Author: (c) 2024 Andrea Alberti
+#===============================================================================
+
+class NotSupportedPlatform(Exception):
+    """Raise exception when the current platform is not supported"""
+
+class FailedResolveCodePath(Exception):
+    """Raise exception when resolving path of a file with programming code failed"""
+
 class FailedChDir(Exception):
     """Raise exception when changing directory to tmux pane current directory fails"""
 
@@ -25,4 +35,4 @@ class FzfError(Exception):
 class LsColorsNotConfigured(Exception):
     """Raise exception when LS_COLORS could not be configured"""
 
-__all__ = ["FailedChDir", "FailedTmuxPaneHeight", "PatternNotMatching", "NoSuitableAppFound", "CommandFailed", "FzfUserInterrupt", "FzfError"]
+__all__ = ["FailedChDir", "FailedTmuxPaneHeight", "PatternNotMatching", "NoSuitableAppFound", "CommandFailed", "FzfUserInterrupt", "FzfError", "FailedResolveCodePath"]

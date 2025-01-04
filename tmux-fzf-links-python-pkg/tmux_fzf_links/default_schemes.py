@@ -1,34 +1,99 @@
+#===============================================================================
+#   Author: (c) 2024 Andrea Alberti
+#===============================================================================
+
 import re
 import sys
-import logging
-from os.path import expanduser
-from pathlib import Path
-from .export import OpenerType, SchemeEntry, colors
+from .export import OpenerType, SchemeEntry, PreHandledMatch, colors, heuristic_find_file
+from .errors_types import NotSupportedPlatform, FailedResolveCodePath
 
-def git_post_handler(match:re.Match[str]) -> list[str]:
-    return [f"https://github.com/{match.group(0)}"]
+# >>> GIT SCHEME >>>
 
-def error_post_handler(match:re.Match[str]) -> list[str]:
-    # Handle error messages appearing on the command line
-    # and create an appropriate link to open the affected file 
-    
-    file=match.group('file')
-    line=match.group('line')
+def git_post_handler(match:re.Match[str]) -> tuple[str,...]:
+    return (f"https://github.com/{match.group(0)}",)
 
-    return [f"{file}:{line}"]
+git_scheme:SchemeEntry = {
+        "tags": ("git",),
+        "opener":OpenerType.BROWSER,
+        "post_handler": git_post_handler,
+        "pre_handler": lambda m: {
+            "display_text": f"{colors.rgb_color(0,255,115)}{m.group(0)}{colors.reset_color}",
+            "tag": "git"
+        },
+        "regex": re.compile(r"(ssh://)?git@\S*")
+    }
 
-def heuristic_find_file(file_path_str:str) -> Path | None:
-    # Expand tilde (~) to the user's home directory    
-    file_path = Path(expanduser(file_path_str))
-    file_path.expanduser
-    # Check if the file exists either as is or relative to the current directory
-    if file_path.exists():
-        return file_path  # Return the absolute path
-    else:
-        # Drop the match if it corresponds to no file
+# <<< GIT SCHEME <<<
+
+# >>> CODE ERROR SCHEME >>>
+
+def code_error_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
+    file = match.group("file")
+    line = match.group("line")
+
+    # fully resolved path
+    resolved_path = heuristic_find_file(file)
+
+    if resolved_path is None:
+        # drop the match if it cannot resolve the path
         return None
 
-def file_pre_handler(match: re.Match[str]) -> str | None:
+    display_text = f"{colors.rgb_color(255,0,0)}{file}, line {line}{colors.reset_color}"
+
+    suffix = resolved_path.suffix
+
+    if suffix == '.py':
+        tag = 'Python'
+    else:
+        # fallback case
+        tag = 'code err.'
+
+    return {"display_text": display_text, "tag": tag}
+
+def code_error_post_handler(match:re.Match[str]) -> tuple[str,...]:
+    # Handle error messages appearing on the command line
+    # and create an appropriate link to open the affected file 
+
+    file=match.group('file')
+
+    # fully resolved path
+    resolved_path = heuristic_find_file(file)
+
+    if resolved_path is None:
+        raise FailedResolveCodePath("could not resolve the path of: {file}")
+
+    line=match.group('line')
+
+    return (f"{resolved_path.resolve()}:{line}",)
+
+code_error_scheme:SchemeEntry = {
+            "tags": ("code err.","Python"),
+            "opener": OpenerType.EDITOR,
+            "post_handler": code_error_post_handler,
+            "pre_handler": code_error_pre_handler,
+            "regex": re.compile(r"File \"(?P<file>...*?)\"\, line (?P<line>[0-9]+)")
+        }
+
+# <<< CODE ERROR SCHEME <<<
+
+# >>> URL SCHEME >>>
+
+url_scheme:SchemeEntry = {
+        "tags": ("url",),
+        "opener": OpenerType.BROWSER,
+        "post_handler": None,
+        "pre_handler": lambda m: {
+            "display_text": f"{colors.rgb_color(200,0,255)}{m.group(0)}{colors.reset_color}",
+            "tag": "url"
+        },
+        "regex": re.compile(r"https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*")
+    }
+
+# <<< URL SCHEME <<<
+
+# >>> FILE SCHEME >>>
+
+def file_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
     # Get the matched file path
     link1 = match.group('link1')
     link2 = match.group('link2')
@@ -38,66 +103,53 @@ def file_pre_handler(match: re.Match[str]) -> str | None:
     else:
         file_path_str = link2
 
-
     if file_path_str is None:
         return None
 
-    logging.debug(file_path_str)
-    
     # Return the fully resolved path
     resolved_path = heuristic_find_file(file_path_str)
     
     if resolved_path:
-        color_code=colors.get_file_color(resolved_path)
-        if color_code:
-            return f"\033[{color_code}m{str(resolved_path)}\033[0m"
+        tag="dir" if resolved_path.is_dir() else "file"
+        if colors.enabled:
+            color_code=colors.get_file_color(resolved_path)
+            display_text = f"\033[{color_code}m{str(resolved_path)}\033[0m"
         else:
-            return str(resolved_path)
+            display_text = f"{str(resolved_path)}"
+        return { 
+            "display_text":display_text,
+            "tag": tag
+            }
     else:
         return None
 
-def file_post_handler(match:re.Match[str]) -> list[str]:
+def file_post_handler(match:re.Match[str]) -> tuple[str,...]:
     file_path_str = match.group(0)
     if sys.platform == "darwin":
-        return ['open','-R', str(heuristic_find_file(file_path_str))]
+        return ('open','-R', str(heuristic_find_file(file_path_str)),)
     elif sys.platform == "linux":
-        return ['xdg-open', str(heuristic_find_file(file_path_str))]
+        return ('xdg-open', str(heuristic_find_file(file_path_str)),)
     elif sys.platform == "win32":
-        return ['explorer', str(heuristic_find_file(file_path_str))]
+        return ('explorer', str(heuristic_find_file(file_path_str)),)
     else:
-        raise Exception(f"platform {sys.platform} not supported")
+        raise NotSupportedPlatform(f"platform {sys.platform} not supported")
+
+file_scheme:SchemeEntry = {
+        "tags": ("file","dir"),
+        "opener": OpenerType.CUSTOM,
+        "post_handler": file_post_handler,
+        "pre_handler": file_pre_handler,
+        "regex": re.compile(r"(\'(?P<link1>\~?[a-zA-Z0-9_\/\-\:\. ]+)\'|(?P<link2>\~?[a-zA-Z0-9_\/\-\:\.]+))")
+    }
+
+# <<< FILE SCHEME <<<
 
 # Define schemes
 default_schemes: list[SchemeEntry] = [
-    # One can use group names as done in the scheme ERROR to extract subblocks, which are availble to the pre_handler and post_handler
-         {
-            "aliases": "url",
-            "opener": OpenerType.BROWSER,
-            "post_handler": None,
-            "pre_handler": lambda m: f"{colors.rgb_color(200,0,255)}{m.group(0)}{colors.reset_color}",
-            "regex": re.compile(r"https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*")
-        },
-        {
-            "aliases": ("file","directory"),
-            "opener": OpenerType.CUSTOM,
-            "post_handler": file_post_handler,
-            "pre_handler": file_pre_handler,
-            "regex": re.compile(r"(\'(?P<link1>\~?[a-zA-Z0-9_\/\-\:\. ]+)\'|(?P<link2>\~?[a-zA-Z0-9_\/\-\:\.]+))")
-        },
-        {
-            "aliases": "git",
-            "opener":OpenerType.BROWSER,
-            "post_handler": git_post_handler,
-            "pre_handler": lambda m: f"{colors.rgb_color(0,255,115)}{m.group(0)}{colors.reset_color}",
-            "regex": re.compile(r"(ssh://)?git@\S*")
-        },
-        {
-            "aliases": "error",
-            "opener": OpenerType.EDITOR,
-            "post_handler": error_post_handler,
-            "pre_handler": lambda m: f"{colors.rgb_color(255,0,0)}{m.group("file")}, line {m.group("line")}{colors.reset_color}",
-            "regex": re.compile(r"File \"(?P<file>...*?)\"\, line (?P<line>[0-9]+)")
-        },
+        url_scheme,
+        file_scheme,
+        git_scheme,
+        code_error_scheme
     ]
 
 __all__ = ["default_schemes"]

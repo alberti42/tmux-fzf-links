@@ -16,7 +16,7 @@ from tmux_fzf_links.fzf_handler import run_fzf
 from .colors import colors
 from typing import override
 
-from .opener import open_link, SchemeEntry
+from .opener import PreHandledMatch, open_link, SchemeEntry
 from .errors_types import CommandFailed, FailedChDir, FzfError, FzfUserInterrupt, NoSuitableAppFound, PatternNotMatching, LsColorsNotConfigured
 from .default_schemes import default_schemes
 
@@ -199,13 +199,9 @@ def run(
 
     # Configure LS_COLORS
     if use_ls_colors_str and use_ls_colors_str=='on':
-        use_ls_colors = True
-    else:
-        use_ls_colors = False
-
-    if use_ls_colors:
         colors.enable_colors(True)
 
+    if colors.enabled:
         if ls_colors_filename:
             try:
                 colors.configure_ls_colors_from_file(ls_colors_filename)
@@ -233,7 +229,7 @@ def run(
     # We use the unique set as an expedient to sort over
     # pre_handled_text while keeping the original text
     seen:set[str] = set()
-    items:list[tuple[str,str]] = []
+    items:list[tuple[PreHandledMatch,str]] = []
 
     # Load user schemes
     user_schemes:list[SchemeEntry]
@@ -243,18 +239,15 @@ def run(
         user_schemes = []
     
     # Merge both schemes giving precedence to user schemes
+    # FIXME: improve merge
     schemes = [*default_schemes, *user_schemes]
 
-    # Create the new dictionary mapping aliases to indexes
-    alias_to_index = {
-        alias: index
+    # Create the new dictionary mapping tags to indexes
+    tag_to_index = {
+        tag: index
         for index, scheme in enumerate(schemes)
-        for aliases in [scheme.get("aliases", [])]  # Retrieve aliases once
-        for alias in ([aliases] if isinstance(aliases, str) else aliases)
+        for tag in scheme.get("tags", [])
     }
-
-    # Find the maximum length in characters of the scheme labels
-    max_len_scheme_names:int = max([len(scheme) for scheme in alias_to_index.keys()])
 
     try:
         # Find pane current path
@@ -269,30 +262,35 @@ def run(
         raise FailedChDir(f"current directory could not be changed: {e}")
 
     # Process each scheme
-    for scheme_type,index_scheme in alias_to_index.items():
-        scheme = schemes[index_scheme]
+    for scheme in schemes:
         # Use regex.finditer to iterate over all matches
         for match in scheme['regex'].finditer(content):
             entire_match = match.group(0)
             # Extract the match string
+            pre_handled_match:PreHandledMatch | None
             if scheme['pre_handler']:
-                pre_handled_text = scheme['pre_handler'](match)
+                pre_handled_match = scheme['pre_handler'](match)
             else:
-                pre_handled_text = entire_match 
+                # fallback case when no pre_handler is provided for the scheme
+                pre_handled_match = {
+                    "display_text": entire_match,
+                    "tag": scheme["tags"][0]
+                }
             # Drop matches for which the pre_handler returns None
-            if pre_handled_text and entire_match not in seen:
+            if pre_handled_match and entire_match not in seen:
                 seen.add(entire_match)
-                # We justify the scheme name for prettier print
-                justified_scheme_type=scheme_type.ljust(max_len_scheme_names)
                 # We keep a copy of the original matched text for later
-                items.append((justified_scheme_type + "  " + pre_handled_text,entire_match,))
+                items.append((pre_handled_match,entire_match,))
     # Clean up no longer needed variables
     del seen
-
+    
     if items == []:
         logger.info('no link found')
         return
 
+    # Find the maximum length in characters of the display text
+    max_len_tag_names:int = max([len(item[0]["tag"]) for item in items])
+        
     # Sort items; it is better not to sort the matches alphabetically if we want to preserve
     # the same order of appearance on the screen. For now, this possibility is disabled. We could
     # enable it later by providing an option for the user to decide.
@@ -301,12 +299,15 @@ def run(
     sorted_choices.reverse()
 
     # Number the items
-    numbered_choices = [f"{colors.tag_color}{idx:4d}{colors.reset_color}  {item[0]}" for idx, item in enumerate(sorted_choices, 1)]
+    numbered_choices = [f"{colors.index_color}{idx:4d}{colors.reset_color} - " \
+        f"{colors.tag_color}{('['+item[0]["tag"]+']').ljust(max_len_tag_names+2)}{colors.reset_color} - " \
+        # add 2 character because of `[` and `]` \
+        f"{item[0]["display_text"]}" for idx, item in enumerate(sorted_choices, 1)]
 
     # Run fzf and get selected items
     try:
         # Run fzf and get selected items
-        result = run_fzf(fzf_display_options,numbered_choices,use_ls_colors)
+        result = run_fzf(fzf_display_options,numbered_choices,colors.enabled)
     except FzfError as e:
         logger.error(f"error: unexpected error: {e}")
         sys.exit(1)
@@ -319,7 +320,7 @@ def run(
 
     # Regular expression to parse the selected item from the fzf options
     # Each line is in the format {four-digit number, two spaces <scheme type>, two spaces, <link>
-    selected_item_pattern = r"\s*(?P<idx>\d+)\s+(?P<type>\S+)\s+(?P<link>.+)"
+    selected_item_pattern = r"\s*(?P<idx>\d+)\s*-\s*\[(?P<type>.+?)\]\s*-\s*(?P<link>.+)"
 
     # Process selected items
     for selected_choice in selected_choices:
@@ -337,7 +338,7 @@ def run(
                 logger.error(f"error: malformed selection: {selected_choice}")
                 continue
             
-            index_scheme = alias_to_index.get(scheme_type,None)
+            index_scheme = tag_to_index.get(scheme_type,None)
             
             if index_scheme is None:
                 logger.error(f"error: malformed selection: {selected_choice}")
@@ -357,7 +358,7 @@ def run(
             if post_handler:
                 post_handled_link = post_handler(match)    
             else:
-                post_handled_link = [match.group(0)]
+                post_handled_link = (match.group(0),)
             
             try:
                 open_link(editor_open_cmd,browser_open_cmd,post_handled_link, schemes[index_scheme]["opener"])

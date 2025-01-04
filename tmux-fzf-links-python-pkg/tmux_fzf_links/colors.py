@@ -1,14 +1,22 @@
+#===============================================================================
+#   Author: (c) 2024 Andrea Alberti
+#===============================================================================
+
 from pathlib import Path
 from .errors_types import LsColorsNotConfigured
 import os
+
+DEFAULT_TAG_COLOR = [130,130,130]
+DEFAULT_INDEX_COLOR = [0,255,0]
 
 # my_module.py
 class ColorsSingletonCls:
     _instance = None
 
     _color_mapping:dict[str,str] = {} # dictionary storing LS_COLORS
-    _color_enabled:bool = False # whether to use colors
+    enabled:bool = False # whether to use colors
     tag_color:str = ""  # fallback case
+    index_color:str = ""  # fallback case
     reset_color:str = ""  # fallback case
 
     def __new__(cls):
@@ -21,17 +29,25 @@ class ColorsSingletonCls:
 
     def enable_colors(self,state:bool):
         if state:
-            self._color_enabled = True
+            self.enabled = True
             self.reset_color = "\033[0m"
-            self.tag_color = self.rgb_color(250,130,130)
+            self.tag_color = self.rgb_color(*DEFAULT_TAG_COLOR)
+            self.index_color = self.rgb_color(*DEFAULT_INDEX_COLOR)
         else:
-            self._color_enabled = False
+            self.enabled = False
             self.reset_color = ""
             self.tag_color = ""
+            self.index_color = ""
+
+    def set_tag_color(self, R:int, G:int, B:int) -> None:
+        self.tag_color = self.rgb_color(R,G,B)
+
+    def set_index_color(self, R:int, G:int, B:int) -> None:
+        self.index_color = self.rgb_color(R,G,B)
 
     def rgb_color(self,R:int,G:int,B:int):
-        if self._color_enabled:
-            return f"\033[1;38;2;{R:d};{G:d};{B:d}m"
+        if self.enabled:
+            return f"\033[38;2;{R:d};{G:d};{B:d}m"
         else:
             return ""
 
@@ -57,10 +73,13 @@ class ColorsSingletonCls:
         if ls_colors:
             self.configure_ls_colors_from_str(ls_colors)
 
-    def get_file_color(self,filepath: Path) -> str | None:
-        """Determine the color for a given file based on LS_COLORS."""
+    def get_file_color(self,filepath: Path) -> str:
+        """Determine the color for a given file based on LS_COLORS.
+        
+        Return an empty string as the fallback case when no color code is found for filepath.
+        """
         if not self._color_mapping:
-            return None
+            return ""
 
         # Check for file extension mapping
         ext = filepath.suffix  # Extract the file extension (e.g., '.txt')
@@ -71,37 +90,37 @@ class ColorsSingletonCls:
 
         # Handle specific file types
         if filepath.is_dir():
-            return self._color_mapping.get('di', None)  # Directory
+            return self._color_mapping.get('di', "")  # Directory
         elif filepath.is_symlink():
-            return self._color_mapping.get('ln', None)  # Symbolic link
+            return self._color_mapping.get('ln', "")  # Symbolic link
         elif filepath.is_block_device():
-            return self._color_mapping.get('bd', None)  # Block device
+            return self._color_mapping.get('bd', "")  # Block device
         elif filepath.is_char_device():
-            return self._color_mapping.get('cd', None)  # Character device
+            return self._color_mapping.get('cd', "")  # Character device
         elif filepath.is_fifo():
-            return self._color_mapping.get('pi', None)  # Named pipe (FIFO)
+            return self._color_mapping.get('pi', "")  # Named pipe (FIFO)
         elif filepath.is_socket():
-            return self._color_mapping.get('so', None)  # Socket
+            return self._color_mapping.get('so', "")  # Socket
         elif filepath.is_file() and os.access(filepath, os.X_OK):
-            return self._color_mapping.get('ex', None)  # Executable file
+            return self._color_mapping.get('ex', "")  # Executable file
         elif filepath.is_file():
-            return self._color_mapping.get('fi', None)  # Regular file
+            return self._color_mapping.get('fi', "")  # Regular file
 
         # Handle additional cases based on LS_COLORS
         file_name = filepath.name
         if file_name.startswith('.'):
-            return self._color_mapping.get('mh', None)  # Multi-hard link
+            return self._color_mapping.get('mh', "")  # Multi-hard link
         elif file_name.endswith('~'):
-            return self._color_mapping.get('ow', None)  # Other writable file
+            return self._color_mapping.get('ow', "")  # Other writable file
         elif not filepath.exists():
-            return self._color_mapping.get('mi', None)  # Missing file
+            return self._color_mapping.get('mi', "")  # Missing file
         elif filepath.is_symlink() and not filepath.exists():
-            return self._color_mapping.get('or', None)  # Orphan symbolic link
+            return self._color_mapping.get('or', "")  # Orphan symbolic link
         elif filepath.is_symlink() and filepath.is_dir():
-            return self._color_mapping.get('tw', None)  # Sticky and other-writable dir
+            return self._color_mapping.get('tw', "")  # Sticky and other-writable dir
 
         # Fallback strategy for unknown types
-        return self._color_mapping.get('no', None)  # Normal file or fallback
+        return self._color_mapping.get('no', "")  # Normal file or fallback
 
 # Instantiate the singleton class
 colors = ColorsSingletonCls()
