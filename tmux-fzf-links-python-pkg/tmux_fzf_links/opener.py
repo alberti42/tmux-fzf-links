@@ -7,7 +7,6 @@ from typing import Callable,TypedDict
 
 from .errors_types import CommandFailed, NoSuitableAppFound
 
-
 class OpenerType(Enum):
     EDITOR = 0
     BROWSER = 1

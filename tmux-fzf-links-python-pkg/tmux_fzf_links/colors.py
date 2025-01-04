@@ -3,34 +3,46 @@ from .errors_types import LsColorsNotConfigured
 import os
 
 _color_mapping:dict[str,str] = {}
+_color_enabled = False
 
-def _parse_ls_colors(ls_colors:str) -> dict[str,str]:
+reset_color = ""
+
+def enable_colors():
+    global _color_enabled, reset_color
+    _color_enabled = True
+    reset_color = f"\033[0m"
+
+def rgb_color(R:int,G:int,B:int):
+    if _color_enabled:
+        return f"\033[1;38;2;{R:d};{G:d};{B:d}m"
+    else:
+        return ""
+
+def configure_ls_colors_from_str(ls_colors:str):
+    """Parse the LS_COLORS into a dictionary."""
+
+    global _color_mapping, reset_color
+
     for item in ls_colors.split(':'):
         if '=' in item:
             key, value = item.split('=')
             _color_mapping[key] = value
-    return _color_mapping
 
-def configure_ls_colors_from_file(ls_colors_filename:str) -> dict[str,str]:
-    """Parse the LS_COLORS environment variable into a dictionary."""
-    global _color_mapping
-
+def configure_ls_colors_from_file(ls_colors_filename:str):
+    
     try:
         with open(ls_colors_filename, 'r') as file:
             ls_colors = file.read().strip()
     except FileNotFoundError:
         raise LsColorsNotConfigured(f"file '{ls_colors_filename}' not found; LS_COLORS cannot be configured")
-        
-    return _parse_ls_colors(ls_colors)
 
-def configure_ls_colors_from_env() -> dict[str,str]:
-
-    ls_colors = os.getenv('LS_COLORS', None)
+    configure_ls_colors_from_str(ls_colors)
     
+
+def configure_ls_colors_from_env():
+    ls_colors = os.getenv('LS_COLORS', None)
     if ls_colors:
-        return _parse_ls_colors(ls_colors)
-    else:
-        return {}
+        configure_ls_colors_from_str(ls_colors)
 
 def get_file_color(filepath: Path) -> str | None:
     """Determine the color for a given file based on LS_COLORS."""
@@ -79,4 +91,4 @@ def get_file_color(filepath: Path) -> str | None:
     return _color_mapping.get('no', None)  # Normal file or fallback
 
 
-__all__ = ["get_file_color","configure_ls_colors_from_env","configure_ls_colors_from_file"]
+__all__ = ["get_file_color","configure_ls_colors_from_env","configure_ls_colors_from_file","configure_ls_colors_from_str","reset_color","rgb_color"]

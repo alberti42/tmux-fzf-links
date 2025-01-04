@@ -4,16 +4,16 @@
 #   Author: (c) 2024 Andrea Alberti
 #===============================================================================
 
-from operator import truediv
 import os
 import re
 import subprocess
 import sys
-import shlex
 import logging
 import importlib.util
 import pathlib
-from .ls_colors import configure_ls_colors_from_env, configure_ls_colors_from_file
+
+from tmux_fzf_links.fzf_handler import run_fzf
+from .colors import configure_ls_colors_from_env, configure_ls_colors_from_file, enable_colors, reset_color, rgb_color
 from typing import override
 
 from .opener import open_link, SchemeEntry
@@ -176,74 +176,6 @@ def remove_escape_sequences(text:str) -> str:
     # Replace escape sequences with an empty string
     return re.sub(ansi_escape_pattern, '', text)
 
-def get_max_h_value(cmd_user_args:list[str]) -> int | None:
-    if '-max-h' in cmd_user_args:
-        try:
-            # Find the index of '-max-h' and get the next argument
-            max_h_index = cmd_user_args.index('-max-h')
-            max_h_arg = cmd_user_args[max_h_index + 1]
-
-            # Remove '-max-h' and its argument
-            cmd_user_args.pop(max_h_index)  # Remove '-max-h'
-            cmd_user_args.pop(max_h_index)  # Remove the argument (shifts due to first pop)
-
-            if max_h_arg.endswith('%'):
-                # Convert percentage to an integer based on pane_height
-                percentage = int(max_h_arg[:-1])  # Remove '%' and convert to int
-
-                try:
-                    pane_height_str = subprocess.check_output(
-                        ('tmux', 'display', '-p', '#{pane_height}',),
-                        shell=False,
-                        text=True,
-                    )
-                    pane_height = int(pane_height_str)
-                except Exception as e:
-                    raise FailedTmuxPaneHeight(f"tmux pane height could not be determined: {e}")
-                
-                max_h_value = pane_height * percentage // 100
-            else:
-                # Convert the argument directly to an integer
-                max_h_value = int(max_h_arg)
-
-            return max_h_value
-        except (IndexError, ValueError):
-            # Handle missing or invalid value for '-max-h'
-            raise FailedTmuxPaneHeight("option '-max-h' is defined but its value is missing or invalid.")
-    else:
-        # Parameter '-max-h' is not defined
-        return None
-
-def run_fzf(fzf_display_options:str,choices: list[str],use_ls_colors:bool) -> subprocess.CompletedProcess[str]:
-    """Run fzf with the given options."""
-
-    # Split the options into a list
-    cmd_user_args: list[str] = shlex.split(fzf_display_options)
-    max_h_value = get_max_h_value(cmd_user_args)
-
-    # Compute the required height
-    height=len(choices)+4 # number of lines
-    if max_h_value:
-        height=max(min(height,max_h_value),5)
-    
-    # Set a list of default argument, which are computed dynamically
-    cmd_default_args = []
-    if use_ls_colors:
-        cmd_default_args.extend(['--ansi'])
-    cmd_default_args.extend(['-h',f'{height:d}'])
-
-    # In this order, user arguments take priority over default arguments
-    cmd_args = ['fzf-tmux'] + cmd_default_args + cmd_user_args
-
-    result = subprocess.run(cmd_args, input="\n".join(choices), shell=False, text=True, capture_output=True)
-    if result.returncode == 0:
-        return result
-    elif result.returncode == 130:
-        # Allow exit code 130 for user cancellation; see fzf manual
-        raise FzfUserInterrupt()
-    else:
-        raise FzfError(f"fzf failed with exit code {result.returncode}: {result.stderr}", result.returncode)   
-
 def run(
         history_limit:str='',
         editor_open_cmd:str='',
@@ -253,9 +185,9 @@ def run(
         loglevel_tmux:str='',
         loglevel_file:str='',
         log_filename:str='',
+        user_schemes_path:str='',
         use_ls_colors_str:str='',
-        ls_colors_filename:str='',
-        user_schemes_path:str=''
+        ls_colors_filename:str=''
     ):
 
     # Set up the logger
@@ -272,6 +204,8 @@ def run(
         use_ls_colors = False
 
     if use_ls_colors:
+        enable_colors()
+
         if ls_colors_filename:
             try:
                 configure_ls_colors_from_file(ls_colors_filename)
@@ -292,8 +226,6 @@ def run(
             shell=False,
             text=True,
         )
-
-    logging.debug(os.environ)
 
     # Remove escape sequences
     content=remove_escape_sequences(content)
@@ -353,10 +285,12 @@ def run(
         return
 
     # Sort items
-    sorted_choices = sorted(items, key=lambda x: x[0])
+    # sorted_choices = sorted(items, key=lambda x: x[0])
+    sorted_choices = items
+    sorted_choices.reverse()
 
     # Number the items
-    numbered_choices = [f"{idx:4d}  {item[0]}" for idx, item in enumerate(sorted_choices, 1)]
+    numbered_choices = [f"{rgb_color(130,130,130)}{idx:4d}  {item[0]}{reset_color}" for idx, item in enumerate(sorted_choices, 1)]
 
     # Run fzf and get selected items
     try:
@@ -373,7 +307,7 @@ def run(
     selected_choices = result.stdout.splitlines()
 
     # Regular expression to parse the selected item from the fzf options
-    # Each line is in the format {three-digit number, space, space, 
+    # Each line is in the format {four-digit number, two spaces <scheme type>, two spaces, <link>
     selected_item_pattern = r"\s*(?P<idx>\d+)\s+(?P<type>\S+)\s+(?P<link>.+)"
 
     # Process selected items

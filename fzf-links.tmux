@@ -43,9 +43,10 @@ ls_colors_filename=$(eval echo "$ls_colors_filename")
 user_schemes_path=$(eval echo "$user_schemes_path")
 
 # Bind the key in Tmux to run the Python script
-tmux bind-key "$key" run-shell -b "
+tmux bind-key "$key" run-shell "
 if [[ ! -x \"$python_path\" ]]; then
   tmux display-message -d 0 \"fzf-links: no executable python found at the location: $python_path\"
   exit 0
 fi
-PYTHONPATH=\"$SCRIPT_DIR/tmux-fzf-links-python-pkg\" \"$python_path\" -m tmux_fzf_links \"$history_limit\" \"$editor_open_cmd\" \"$browser_open_cmd\" \"$fzf_display_options\" \"$path_extension\" \"$loglevel_tmux\" \"$loglevel_file\" \"$log_filename\" \"$use_ls_colors\" \"$ls_colors_filename\" \"$user_schemes_path\""
+PYTHONPATH=\"$SCRIPT_DIR/tmux-fzf-links-python-pkg\" \"$python_path\" -m tmux_fzf_links \"$history_limit\" \"$editor_open_cmd\" \"$browser_open_cmd\" \"$fzf_display_options\" \"$path_extension\" \"$loglevel_tmux\" \"$loglevel_file\" \"$log_filename\" \"$user_schemes_path\" \"$use_ls_colors\" \"$ls_colors_filename\"
+"
