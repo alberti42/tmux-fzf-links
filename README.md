@@ -127,20 +127,20 @@ Default options are already provided. However, you can customize all options by 
 
 ```tmux
 # === tmux-fzf-links ===
-set-option -g @fzf-links-key o
-set-option -g @fzf-links-history-lines "0"
+# set-option -g @fzf-links-key o
+# set-option -g @fzf-links-history-lines "0"
 set-option -g @fzf-links-editor-open-cmd "tmux new-window -n 'emacs' /usr/local/bin/emacs +%line '%file'"
 set-option -g @fzf-links-browser-open-cmd "/path/to/browser '%url'"
 set-option -g @fzf-links-fzf-display-options "-w 100% --maxnum-displayed 20 --multi -0 --no-preview"
-set-option -g @fzf-links-path-extension "/usr/local/bin"
-set-option -g @fzf-links-loglevel-tmux "WARNING"
-set-option -g @fzf-links-loglevel-file "INFO"
-set-option -g @fzf-links-log-filename "~/log.txt"
+# set-option -g @fzf-links-path-extension "/usr/local/bin"
+# set-option -g @fzf-links-loglevel-tmux "WARNING"
+# set-option -g @fzf-links-loglevel-file "DEBUG"
+# set-option -g @fzf-links-log-filename "~/log.txt"
 set-option -g @fzf-links-python "python3"
-set-option -g @fzf-links-python-path "~/.virtualenvs/my_special_venv/lib/python3.11/site-packages"
-set-option -g @fzf-links-user-schemes-path "~/.local/share/tmux-fzf-links/user_schemes.py"
+# set-option -g @fzf-links-python-path "~/.virtualenvs/my_special_venv/lib/python3.11/site-packages"
+# set-option -g @fzf-links-user-schemes-path "~/.tmux/plugins/tmux-fzf-links/user_schemes/user_schemes.py"
 set-option -g @fzf-links-use-colors on
-set-option -g @fzf-links-ls-colors-filename "~/.cache/zinit/ls_colors.zsh"
+# set-option -g @fzf-links-ls-colors-filename "~/.cache/zinit/ls_colors.zsh"
 
 run-shell "~/.local/share/tmux-fzf-links/fzf-links.tmux"
 ```
