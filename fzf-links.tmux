@@ -46,7 +46,7 @@ user_schemes_path=$(eval echo "$user_schemes_path")
 
 # Bind the key in Tmux to run the Python script
 tmux bind-key "$key" run-shell "
-if [[ ! -x \"$python_path\" ]]; then
+if [[ ! -x \"$python\" ]]; then
   tmux display-message -d 0 \"fzf-links: no executable python found at the location: $python_path\"
   exit 0
 fi
