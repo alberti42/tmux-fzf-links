@@ -35,6 +35,12 @@ The plugin's Python-based architecture enables advanced users to:
 
 ---
 
+## Screencast
+
+<img src="https://github.com/alberti42/tmux-ssh-syncing/blob/main/doc/screencast.gif" alt="Screencast" />
+
+---
+
 ## 📦 Installation
 
 ### Using TPM (Tmux Plugin Manager)
