@@ -8,6 +8,7 @@ import os
 
 DEFAULT_TAG_COLOR = [130,130,130]
 DEFAULT_INDEX_COLOR = [0,255,0]
+DEFAULT_DASH_COLOR = [160,160,160]
 
 # my_module.py
 class ColorsSingletonCls:
@@ -33,17 +34,22 @@ class ColorsSingletonCls:
             self.reset_color = "\033[0m"
             self.tag_color = self.rgb_color(*DEFAULT_TAG_COLOR)
             self.index_color = self.rgb_color(*DEFAULT_INDEX_COLOR)
+            self.dash_color = self.rgb_color(*DEFAULT_DASH_COLOR)
         else:
             self.enabled = False
             self.reset_color = ""
             self.tag_color = ""
             self.index_color = ""
+            self.dash_color = ""
 
     def set_tag_color(self, R:int, G:int, B:int) -> None:
         self.tag_color = self.rgb_color(R,G,B)
 
     def set_index_color(self, R:int, G:int, B:int) -> None:
         self.index_color = self.rgb_color(R,G,B)
+
+    def set_dash_color(self, R:int, G:int, B:int) -> None:
+        self.dash_color = self.rgb_color(R,G,B)
 
     def rgb_color(self,R:int,G:int,B:int):
         if self.enabled:

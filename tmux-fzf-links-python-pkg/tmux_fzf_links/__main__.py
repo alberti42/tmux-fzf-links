@@ -299,8 +299,8 @@ def run(
     sorted_choices.reverse()
 
     # Number the items
-    numbered_choices = [f"{colors.index_color}{idx:4d}{colors.reset_color} - " \
-        f"{colors.tag_color}{('['+item[0]["tag"]+']').ljust(max_len_tag_names+2)}{colors.reset_color} - " \
+    numbered_choices = [f"{colors.index_color}{idx:4d}{colors.reset_color} {colors.dash_color}-{colors.reset_color} " \
+        f"{colors.tag_color}{('['+item[0]["tag"]+']').ljust(max_len_tag_names+2)}{colors.reset_color} {colors.dash_color}-{colors.reset_color} " \
         # add 2 character because of `[` and `]` \
         f"{item[0]["display_text"]}" for idx, item in enumerate(sorted_choices, 1)]
 
