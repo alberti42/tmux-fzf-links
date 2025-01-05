@@ -120,18 +120,19 @@ Default options are already provided. However, you can customize all options by 
 ```tmux
 # === tmux-fzf-links ===
 set-option -g @fzf-links-key o
-set-option -g @fzf-links-history-limit 'screen'
-set-option -g @fzf-links-editor-open-cmd '/path/to/editor'
-set-option -g @fzf-links-browser-open-cmd '/path/to/browser'
-set-option -g @fzf-links-fzf-display-options '-w 100% --maxnum-displayed 20 --multi -0 --no-preview'
-set-option -g @fzf-links-path-extension '/usr/local/bin'
-set-option -g @fzf-links-loglevel-tmux 'WARNING'
-set-option -g @fzf-links-loglevel-file 'INFO'
-set-option -g @fzf-links-log-filename '~/log.txt'
-set-option -g @fzf-links-python-path 'python3'
-set-option -g @fzf-links-user-schemes-path '~/.local/share/tmux-fzf-links/user_schemes.py'
+set-option -g @fzf-links-history-lines "0"
+set-option -g @fzf-links-editor-open-cmd "tmux new-window -n 'emacs' /usr/local/bin/emacs"
+set-option -g @fzf-links-browser-open-cmd "/path/to/browser"
+set-option -g @fzf-links-fzf-display-options "-w 100% --maxnum-displayed 20 --multi -0 --no-preview"
+set-option -g @fzf-links-path-extension "/usr/local/bin"
+set-option -g @fzf-links-loglevel-tmux "WARNING"
+set-option -g @fzf-links-loglevel-file "INFO"
+set-option -g @fzf-links-log-filename "~/log.txt"
+set-option -g @fzf-links-python "python3"
+set-option -g @fzf-links-python-path "~/.virtualenvs/my_special_venv/lib/python3.11/site-packages"
+set-option -g @fzf-links-user-schemes-path "~/.local/share/tmux-fzf-links/user_schemes.py"
 set-option -g @fzf-links-use-colors on
-set-option -g @fzf-links-ls-colors-filename '~/.cache/zinit/ls_colors.zsh'
+set-option -g @fzf-links-ls-colors-filename "~/.cache/zinit/ls_colors.zsh"
 
 run-shell "~/.local/share/tmux-fzf-links/fzf-links.tmux"
 ```
@@ -150,19 +151,34 @@ run-shell "~/.local/share/tmux-fzf-links/fzf-links.tmux"
    set-option -g @fzf-links-fzf-display-options '-w 100% --maxnum-displayed 10 --multi -0 --no-preview'
    ```
 
-2. **`@fzf-links-ls-colors-filename`**: This option is not strictly necessary if `$LS_COLORS` is available in the environment. Use it only if `tmux` is launched directly as the first process in the terminal, bypassing the shell initialization where `$LS_COLORS` is set.
+2. **`@fzf-links-editor-open-cmd`**:  
+   To open a terminal-based editor, such as Emacs or Vim, use `tmux new-window` to ensure the editor opens in a new tmux window. Example:  
+   ```tmux
+   set-option -g @fzf-links-editor-open-cmd 'tmux new-window -n "emacs" /usr/local/bin/emacs'
+   ```
 
-3. **`@fzf-links-path-extension`**: This option is also not strictly necessary. It is only required if `fzf-tmux` or `tmux` binaries are not in the `$PATH` that was available when `tmux` started. The plugin only requires these two processes.
+   For desktop applications, such as Sublime Text, you can directly provide the path to the editor. Example:  
+   ```tmux
+   set-option -g @fzf-links-editor-open-cmd '/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl'
+   ```
+
+3. **`history-lines`**: An integer number determining how many extra lines of history to consider. By default, it is set to 0.
+
+4. **`@fzf-links-ls-colors-filename`**: This option is not strictly necessary if `$LS_COLORS` is available in the environment. Use it only if `tmux` is launched directly as the first process in the terminal, bypassing the shell initialization where `$LS_COLORS` is set.
+
+5. **`@fzf-links-path-extension`**: This option is also not strictly necessary. It is only required if `fzf-tmux` or `tmux` binaries are not in the `$PATH` that was available when `tmux` started. The plugin only requires these two processes.
 
 Replace the placeholders with appropriate paths and commands for your environment.
 
-4. 🔍 **Logging**:
+6. **`fzf-links-python`** and **`fzf-links-python-path`**: These two options allow specifying the path to the Python interpreter and, if needed, to a Python `site-packages` directory, which is appended to `$PYTHONPATH`. The plugin does not rely on any external dependencies. It makes use of the `python-magic` module when this module is available in `site-packages`. Moreover, you may want to import external modules installed in `site-packages` to extend the functionality of the plugin in `user_schemes`.
 
-	Control logging levels via these options:
+7. 🔍 **Logging**:
 
-	- `@fzf-links-loglevel-tmux`: Adjust tmux log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`).
-	- `@fzf-links-loglevel-file`: Set log verbosity for file logs.
-	- `@fzf-links-log-filename`: Specify the log file location. Omit this property or set it to an empty string to prevent logging to file.
+   Control logging levels via these options:
+
+   - `@fzf-links-loglevel-tmux`: Adjust tmux log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`).
+   - `@fzf-links-loglevel-file`: Set log verbosity for file logs.
+   - `@fzf-links-log-filename`: Specify the log file location. Omit this property or set it to an empty string to prevent logging to file.
 
 ---
 
