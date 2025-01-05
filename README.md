@@ -39,7 +39,7 @@ The plugin's Python-based architecture enables advanced users to:
 
 Watch the plugin in action to see how it enhances your tmux workflow!
 
-<img src="https://github.com/alberti42/tmux-fzf-links/blob/master/images/screencast.gif" alt="Screencast" />
+<a href="https://asciinema.org/a/697089" target="_blank"><img src="https://asciinema.org/a/697089.svg" /></a>
 
 ---
 
