@@ -30,4 +30,7 @@ ip_scheme:SchemeEntry = {
 # Define schemes
 user_schemes: list[SchemeEntry] = [ ip_scheme, ]
 
-__all__ = ["user_schemes"]
+# Remove default schemes (e.g.: ["file"] to remove tag "file")
+rm_default_schemes:list[str] = []
+
+__all__ = ["user_schemes","rm_default_schemes"]

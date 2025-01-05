@@ -140,7 +140,7 @@ def validate_log_level(user_level:str):
 
 # <<< LOGGER <<<
 
-def load_user_module(file_path: str) -> list[SchemeEntry]:
+def load_user_module(file_path: str) -> tuple[list[SchemeEntry],list[str]]:
     """Dynamically load a Python module from the given file path."""
     try:
         # Ensure the file path is absolute
@@ -156,11 +156,19 @@ def load_user_module(file_path: str) -> list[SchemeEntry]:
             
             # Retrieve the user_schemes attribute
             user_schemes = getattr(user_module, "user_schemes", None)
+
+            # Retrieve the rm_default_schemes attribute
+            rm_default_schemes = getattr(user_module, "rm_default_schemes", None)
             
             if user_schemes is None or not isinstance(user_schemes, list):
                 raise TypeError(f"'user_schemes' must be a list, got {type(user_schemes)}")
+
+            if rm_default_schemes is None:
+                rm_default_schemes = []
+            if not isinstance(rm_default_schemes, list):
+                raise TypeError(f"'rm_default_schemes' must be a list, got {type(rm_default_schemes)}")
             
-            return user_schemes
+            return (user_schemes,rm_default_schemes,)
         else:
             raise ImportError(f"cannot create a module spec for {file_path}")
     except Exception as e:
@@ -226,21 +234,26 @@ def run(
     # Remove escape sequences
     content=remove_escape_sequences(content)
 
-    # We use the unique set as an expedient to sort over
-    # pre_handled_text while keeping the original text
-    seen:set[str] = set()
-    items:list[tuple[PreHandledMatch,str]] = []
-
     # Load user schemes
     user_schemes:list[SchemeEntry]
     if user_schemes_path:
-        user_schemes = load_user_module(user_schemes_path)
+        loaded_user_module = load_user_module(user_schemes_path)
+        user_schemes = loaded_user_module[0]
+        rm_default_schemes = loaded_user_module[1]
+        # print(rm_default_schemes)
     else:
         user_schemes = []
     
     # Merge both schemes giving precedence to user schemes
-    # FIXME: improve merge
-    schemes = [*default_schemes, *user_schemes]
+
+    # Set of schemes of already checked out
+    schemes:list[SchemeEntry] = []
+    checked:set[str] = set()
+    for scheme in user_schemes + default_schemes:
+        # if none of the tags is already present in 'checked'
+        if all(tag not in checked and tag not in rm_default_schemes for tag in scheme["tags"]):
+            schemes.append(scheme)
+    del checked
 
     # Create the new dictionary mapping tags to indexes
     tag_to_index = {
@@ -261,6 +274,11 @@ def run(
     except Exception as e:
         raise FailedChDir(f"current directory could not be changed: {e}")
 
+    # We use the unique set as an expedient to sort over
+    # pre_handled_text while keeping the original text
+    seen:set[str] = set()
+    items:list[tuple[PreHandledMatch,str]] = []
+
     # Process each scheme
     for scheme in schemes:
         # Use regex.finditer to iterate over all matches
@@ -278,6 +296,10 @@ def run(
                 }
             # Drop matches for which the pre_handler returns None
             if pre_handled_match and entire_match not in seen:
+                if pre_handled_match["tag"] not in scheme["tags"]:
+                    logger.warning(f"the dynamically returned '{pre_handled_match["tag"]}' is not included in: {scheme["tags"]}")
+                    continue
+
                 seen.add(entire_match)
                 # We keep a copy of the original matched text for later
                 items.append((pre_handled_match,entire_match,))

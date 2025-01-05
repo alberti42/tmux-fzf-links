@@ -25,6 +25,16 @@ The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmu
 
 ---
 
+## 🧩 Extensibility
+
+The plugin's Python-based architecture enables advanced users to:
+
+1. Define intricate regular expressions.
+2. Implement pre- and post-processing functions for custom behaviors.
+3. Extend functionality without modifying the core code.
+
+---
+
 ## 📦 Installation
 
 ### Using TPM (Tmux Plugin Manager)
@@ -145,6 +155,14 @@ run-shell "~/.local/share/tmux-fzf-links/fzf-links.tmux"
 3. **`@fzf-links-path-extension`**: This option is also not strictly necessary. It is only required if `fzf-tmux` or `tmux` binaries are not in the `$PATH` that was available when `tmux` started. The plugin only requires these two processes.
 
 Replace the placeholders with appropriate paths and commands for your environment.
+
+4. 🔍 **Logging**:
+
+	Control logging levels via these options:
+
+	- `@fzf-links-loglevel-tmux`: Adjust tmux log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`).
+	- `@fzf-links-loglevel-file`: Set log verbosity for file logs.
+	- `@fzf-links-log-filename`: Specify the log file location. Omit this property or set it to an empty string to prevent logging to file.
 
 ---
 
@@ -343,26 +361,6 @@ user_schemes = [
 ```
 
 Specify the path to your `user_schemes.py` file in your `.tmux.conf` configuration.
-
----
-
-## 🔍 Logging
-
-Control logging levels via these options:
-
-- `@fzf-links-loglevel-tmux`: Adjust tmux log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`).
-- `@fzf-links-loglevel-file`: Set log verbosity for file logs.
-- `@fzf-links-log-filename`: Specify the log file location.
-
----
-
-## 🧩 Extensibility
-
-The plugin's Python-based architecture enables advanced users to:
-
-1. Define intricate regular expressions.
-2. Implement pre- and post-processing functions for custom behaviors.
-3. Extend functionality without modifying the core code.
 
 ---
 
