@@ -10,7 +10,6 @@ DEFAULT_TAG_COLOR = [130,130,130]
 DEFAULT_INDEX_COLOR = [0,255,0]
 DEFAULT_DASH_COLOR = [160,160,160]
 
-# my_module.py
 class ColorsSingletonCls:
     _instance = None
 

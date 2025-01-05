@@ -1,11 +1,18 @@
 #===============================================================================
 #   Author: (c) 2024 Andrea Alberti
 #===============================================================================
-
+    
+try:
+    import magicc
+    MAGIC_AVAILABLE = True
+except ImportError:
+    MAGIC_AVAILABLE = False
+import logging
 import re
 import sys
-from .export import OpenerType, SchemeEntry, PreHandledMatch, colors, heuristic_find_file
-from .errors_types import NotSupportedPlatform, FailedResolveCodePath
+import shlex
+from .export import OpenerType, SchemeEntry, PreHandledMatch, colors, heuristic_find_file, configs
+from .errors_types import NotSupportedPlatform, FailedResolvePath
 
 # >>> GIT SCHEME >>>
 
@@ -60,7 +67,7 @@ def code_error_post_handler(match:re.Match[str]) -> tuple[str,...]:
     resolved_path = heuristic_find_file(file)
 
     if resolved_path is None:
-        raise FailedResolveCodePath("could not resolve the path of: {file}")
+        raise FailedResolvePath("could not resolve the path of: {file}")
 
     line=match.group('line')
 
@@ -124,15 +131,43 @@ def file_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
         return None
 
 def file_post_handler(match:re.Match[str]) -> tuple[str,...]:
+
     file_path_str = match.group(0)
-    if sys.platform == "darwin":
-        return ('open','-R', str(heuristic_find_file(file_path_str)),)
-    elif sys.platform == "linux":
-        return ('xdg-open', str(heuristic_find_file(file_path_str)),)
-    elif sys.platform == "win32":
-        return ('explorer', str(heuristic_find_file(file_path_str)),)
+    
+    resolved_path = heuristic_find_file(file_path_str)
+    if resolved_path is None:
+        raise FailedResolvePath("could not resolve the path of: {file}")
+
+    resolved_path_str = str(resolved_path.resolve())
+
+    is_binary=True # we assume a binary file as the fallback case
+    if resolved_path.is_file:
+        if MAGIC_AVAILABLE:
+            # Use `magic` to get the MIME type of the file
+            mime = magic.Magic(mime=True)
+            mime_type = mime.from_file(str(resolved_path))
+            if mime_type.startswith('text/'):
+                is_binary = False  
+        else:
+            # Open the file in binary mode and read a portion of it
+            with resolved_path.open('rb') as file:
+                chunk = file.read(1024)  # Read the first 1024 bytes
+                if b'\0' not in chunk:      # Check for null bytes
+                    is_binary = False
+
+    if is_binary:
+        if sys.platform == "darwin":
+            return ('open','-R', resolved_path_str,)
+        elif sys.platform == "linux":
+            return ('xdg-open', resolved_path_str,)
+        elif sys.platform == "win32":
+            return ('explorer', resolved_path_str,)
+        else:
+            raise NotSupportedPlatform(f"platform {sys.platform} not supported")
     else:
-        raise NotSupportedPlatform(f"platform {sys.platform} not supported")
+        args = shlex.split(configs.editor_open_cmd)
+        args.append(resolved_path_str)
+        return tuple(args)
 
 file_scheme:SchemeEntry = {
         "tags": ("file","dir"),

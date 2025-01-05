@@ -14,6 +14,7 @@ import pathlib
 
 from tmux_fzf_links.fzf_handler import run_fzf
 from .colors import colors
+from .configs import configs
 from typing import override
 
 from .opener import PreHandledMatch, open_link, SchemeEntry
@@ -185,7 +186,7 @@ def remove_escape_sequences(text:str) -> str:
     return re.sub(ansi_escape_pattern, '', text)
 
 def run(
-        history_limit:str='',
+        history_lines:str='',
         editor_open_cmd:str='',
         browser_open_cmd:str='',
         fzf_display_options:str='',
@@ -197,6 +198,18 @@ def run(
         use_ls_colors_str:str='',
         ls_colors_filename:str=''
     ):
+
+    configs.initialize(history_lines,
+        editor_open_cmd,
+        browser_open_cmd,
+        fzf_display_options,
+        path_extension,
+        loglevel_tmux,
+        loglevel_file,
+        log_filename,
+        user_schemes_path,
+        use_ls_colors_str,
+        ls_colors_filename)    
 
     # Set up the logger
     logger = set_up_logger(loglevel_tmux,loglevel_file,log_filename)
@@ -219,12 +232,8 @@ def run(
             colors.configure_ls_colors_from_env()
 
     # Capture tmux content
-    capture_str:list[str]=['tmux', 'capture-pane', '-J', '-p', '-e']
-    if history_limit != "screen":
-        # It the history limit is not set to screen, then so many extra
-        # lines are captured from the buffer history
-        capture_str.extend(['-S', f'-{history_limit}'])
-
+    capture_str:list[str]=['tmux', 'capture-pane', '-J', '-p', '-e', '-S', f'-{history_lines}']
+   
     content = subprocess.check_output(
             capture_str,
             shell=False,
@@ -334,9 +343,8 @@ def run(
         logger.error(f"error: unexpected error: {e}")
         sys.exit(1)
     except FzfUserInterrupt as e:
-        logger.info("no selection made")
-        sys.exit(0)
-        
+        sys.exit(0)    
+
     # Process selected items
     selected_choices = result.stdout.splitlines()
 
@@ -403,3 +411,5 @@ if __name__ == "__main__":
         logging.error(f"{e}")
     except Exception as e:
         logging.error(f"unexpected runtime error: {e}")
+
+__all__ = []

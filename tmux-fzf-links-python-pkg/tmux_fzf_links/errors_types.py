@@ -5,7 +5,7 @@
 class NotSupportedPlatform(Exception):
     """Raise exception when the current platform is not supported"""
 
-class FailedResolveCodePath(Exception):
+class FailedResolvePath(Exception):
     """Raise exception when resolving path of a file with programming code failed"""
 
 class FailedChDir(Exception):
@@ -35,4 +35,4 @@ class FzfError(Exception):
 class LsColorsNotConfigured(Exception):
     """Raise exception when LS_COLORS could not be configured"""
 
-__all__ = ["FailedChDir", "FailedTmuxPaneHeight", "PatternNotMatching", "NoSuitableAppFound", "CommandFailed", "FzfUserInterrupt", "FzfError", "FailedResolveCodePath"]
+__all__ = ["FailedChDir", "FailedTmuxPaneHeight", "PatternNotMatching", "NoSuitableAppFound", "CommandFailed", "FzfUserInterrupt", "FzfError", "FailedResolvePath"]

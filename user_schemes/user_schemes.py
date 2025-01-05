@@ -1,4 +1,4 @@
-from tmux_fzf_links.export import OpenerType, SchemeEntry, PreHandledMatch, colors
+from tmux_fzf_links.export import OpenerType, SchemeEntry, PreHandledMatch, configs, colors
 import re
 
 ## Configure the color of indexes and tags

@@ -8,6 +8,7 @@ import os
 import subprocess
 from enum import Enum
 from typing import Callable,TypedDict
+import shlex
 
 from .errors_types import CommandFailed, NoSuitableAppFound
 
@@ -55,14 +56,14 @@ def open_link(editor_open_cmd:str, browser_open_cmd:str, post_handled_match:tupl
     # Build the command
     
     # Add '{process}' as the first element
-    cmds = list(post_handled_match)
+    args = list(post_handled_match)
     if process:
-        cmds.insert(0, process)
+        args = shlex.split(process) + args
     
     try:
         # Run the command and capture stdout and stderr
         proc = subprocess.Popen(
-            cmds,
+            args,
             shell=False,  # Execute in the user's default shell
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
