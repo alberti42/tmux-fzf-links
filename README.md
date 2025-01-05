@@ -35,7 +35,9 @@ The plugin's Python-based architecture enables advanced users to:
 
 ---
 
-## Screencast
+## 🎥 Screencast
+
+Watch the plugin in action to see how it enhances your tmux workflow!
 
 <img src="https://github.com/alberti42/tmux-ssh-syncing/blob/main/doc/screencast.gif" alt="Screencast" />
 
