@@ -3,11 +3,10 @@
 #===============================================================================
     
 try:
-    import magicc
+    import magic
     MAGIC_AVAILABLE = True
 except ImportError:
     MAGIC_AVAILABLE = False
-import logging
 import re
 import sys
 import shlex
@@ -102,16 +101,13 @@ url_scheme:SchemeEntry = {
 
 def file_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
     # Get the matched file path
-    link1 = match.group('link1')
-    link2 = match.group('link2')
+    link1:str = match.group('link1')
+    link2:str = match.group('link2')
     
     if link1:
         file_path_str = link1
     else:
         file_path_str = link2
-
-    if file_path_str is None:
-        return None
 
     # Return the fully resolved path
     resolved_path = heuristic_find_file(file_path_str)
@@ -132,11 +128,18 @@ def file_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
 
 def file_post_handler(match:re.Match[str]) -> tuple[str,...]:
 
-    file_path_str = match.group(0)
+    # Get the matched file path
+    link1:str = match.group('link1')
+    link2:str = match.group('link2')
     
+    if link1:
+        file_path_str = link1
+    else:
+        file_path_str = link2
+
     resolved_path = heuristic_find_file(file_path_str)
     if resolved_path is None:
-        raise FailedResolvePath("could not resolve the path of: {file}")
+        raise FailedResolvePath(f"could not resolve the path of: {file_path_str}")
 
     resolved_path_str = str(resolved_path.resolve())
 
