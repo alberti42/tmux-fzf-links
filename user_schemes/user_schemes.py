@@ -13,9 +13,9 @@ def ip_pre_handler(match:re.Match[str]) -> PreHandledMatch | None:
             "tag": "IPv4"
         }
 
-def ip_post_handler(match:re.Match[str]) -> tuple[str,...]:
+def ip_post_handler(match:re.Match[str]) -> dict[str,str]:
     ip_addr_str = match.group("ip")
-    return (f"https://{ip_addr_str}",)
+    return {'url': f"https://{ip_addr_str}"}
 
 ip_scheme:SchemeEntry = {   
         "tags": ("IPv4",),

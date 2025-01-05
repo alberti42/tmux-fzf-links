@@ -388,7 +388,7 @@ def run(
             if post_handler:
                 post_handled_link = post_handler(match)    
             else:
-                post_handled_link = (match.group(0),)
+                post_handled_link = {'file':match.group(0)}
             
             try:
                 open_link(editor_open_cmd,browser_open_cmd,post_handled_link, schemes[index_scheme]["opener"])

@@ -86,13 +86,6 @@ class ColorsSingletonCls:
         if not self._color_mapping:
             return ""
 
-        # Check for file extension mapping
-        ext = filepath.suffix  # Extract the file extension (e.g., '.txt')
-        if ext:
-            ext_key = f"*{ext}"  # Convert '.txt' to '*.txt'
-            if ext_key in self._color_mapping:
-                return self._color_mapping[ext_key]
-
         # Handle specific file types
         if filepath.is_dir():
             return self._color_mapping.get('di', "")  # Directory
@@ -108,8 +101,13 @@ class ColorsSingletonCls:
             return self._color_mapping.get('so', "")  # Socket
         elif filepath.is_file() and os.access(filepath, os.X_OK):
             return self._color_mapping.get('ex', "")  # Executable file
-        elif filepath.is_file():
-            return self._color_mapping.get('fi', "")  # Regular file
+
+        # Check for file extension mapping
+        ext = filepath.suffix  # Extract the file extension (e.g., '.txt')
+        if ext:
+            ext_key = f"*{ext}"  # Convert '.txt' to '*.txt'
+            if ext_key in self._color_mapping:
+                return self._color_mapping[ext_key]
 
         # Handle additional cases based on LS_COLORS
         file_name = filepath.name
@@ -123,9 +121,11 @@ class ColorsSingletonCls:
             return self._color_mapping.get('or', "")  # Orphan symbolic link
         elif filepath.is_symlink() and filepath.is_dir():
             return self._color_mapping.get('tw', "")  # Sticky and other-writable dir
+        elif filepath.is_file():
+            return self._color_mapping.get('fi', "")  # Regular file
 
         # Fallback strategy for unknown types
-        return self._color_mapping.get('no', "")  # Normal file or fallback
+        return ""
 
 # Instantiate the singleton class
 colors = ColorsSingletonCls()

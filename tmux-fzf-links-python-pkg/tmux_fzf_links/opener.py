@@ -4,15 +4,13 @@
 
 import shutil
 import re
+import os
 import subprocess
 from enum import Enum
 from typing import Callable,TypedDict
 import shlex
 
 from .errors_types import CommandFailed, NoSuitableAppFound
-
-def parse_editor_open_cmd(editor_open_cmd:str,file:str,line:str="1") -> str:
-    return editor_open_cmd.replace("%%file",file).replace("%%line",line)
 
 class OpenerType(Enum):
     EDITOR = 0
@@ -25,43 +23,56 @@ class PreHandledMatch(TypedDict):
     display_text: str
     tag: str
 
+PostHandledMatch = dict[str, str] | list[str]
+
 # Define the structure of each scheme entry
 class SchemeEntry(TypedDict):
     tags: tuple[str,...]
     opener: OpenerType
     pre_handler: Callable[[re.Match[str]], PreHandledMatch | None] | None  # A function that takes a string and returns a string
-    post_handler: Callable[[re.Match[str]], tuple[str,...]] | None  # A function that takes a string and returns a string
+    post_handler: Callable[[re.Match[str]], PostHandledMatch] | None  # A function that takes a string and returns a string
     regex: re.Pattern[str]            # A compiled regex pattern
 
-def open_link(editor_open_cmd:str, browser_open_cmd:str, post_handled_match:tuple[str,...], opener:OpenerType|str):
+def open_link(editor_open_cmd:str, browser_open_cmd:str, post_handled_match:PostHandledMatch, opener:OpenerType):
     """Open a link using the appropriate handler."""
 
-    process: str | None = None
+    # contains the arguments for subprocess.Popen, including the process to start
+    args:list[str]
 
-    if opener==OpenerType.EDITOR and editor_open_cmd:
-        process = editor_open_cmd
-    elif opener==OpenerType.BROWSER and browser_open_cmd:
-        process = browser_open_cmd
-    elif opener==OpenerType.CUSTOM:
-        process = None
-    elif shutil.which("xdg-open"):
-        process = "xdg-open"
-    elif shutil.which("open"):
-        process = "open"
-    elif opener==OpenerType.EDITOR and "EDITOR" in os.environ:
-        process = os.environ["EDITOR"]
-    elif opener==OpenerType.BROWSER and "BROWSER" in os.environ:
-        process = os.environ["BROWSER"]
+    if opener == OpenerType.CUSTOM:
+        if isinstance(post_handled_match,dict):
+            raise RuntimeError("'post_handled_match' is of type 'dict' whereas a type 'list' was expected")     
+        args = post_handled_match
     else:
-        raise NoSuitableAppFound("no suitable app was found to open the link")
+        if isinstance(post_handled_match,list):
+            raise RuntimeError("'post_handled_match' is of type 'list' whereas a type 'dict' was expected")     
 
-    # Build the command
-    
-    # Add '{process}' as the first element
-    args = list(post_handled_match)
-    if process:
-        args = shlex.split(process) + args
-    
+        # template with the command to be executed
+        template:str
+
+        if opener==OpenerType.EDITOR and editor_open_cmd:
+            template = editor_open_cmd
+        elif opener==OpenerType.BROWSER and browser_open_cmd:
+            template = browser_open_cmd
+        elif shutil.which("xdg-open"):
+            template = "xdg-open '%%file'"
+        elif shutil.which("open"):
+            template = "open '%%file'"
+        elif opener==OpenerType.EDITOR and "EDITOR" in os.environ:
+            template = f"{os.environ["EDITOR"]} '%%file'"
+        elif opener==OpenerType.BROWSER and "BROWSER" in os.environ:
+            template = f"{os.environ["BROWSER"]} '%%file'"
+        else:
+            raise NoSuitableAppFound("no suitable app was found to open the link")
+
+        # The keys in the dictionary represent the placeholders
+        # to be replaced in the template with the corresponding values
+        cmd = template
+        for key,value in post_handled_match.items():
+            cmd = cmd.replace(f"%{key}",value)
+
+        args = shlex.split(cmd)
+
     try:
         # Run the command and capture stdout and stderr
         proc = subprocess.Popen(

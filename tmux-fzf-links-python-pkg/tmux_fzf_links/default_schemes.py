@@ -2,11 +2,6 @@
 #   Author: (c) 2024 Andrea Alberti
 #===============================================================================
     
-try:
-    import magic
-    MAGIC_AVAILABLE = True
-except ImportError:
-    MAGIC_AVAILABLE = False
 import re
 import sys
 import shlex
@@ -15,8 +10,12 @@ from .errors_types import NotSupportedPlatform, FailedResolvePath
 
 # >>> GIT SCHEME >>>
 
-def git_post_handler(match:re.Match[str]) -> tuple[str,...]:
-    return (f"https://github.com/{match.group(0)}",)
+def git_post_handler(match:re.Match[str]) -> dict[str,str]:
+    repo = match.group("repo")
+    if not isinstance(repo,str):
+        raise ValueError(f"github repository of type {type(repo)} but expect of type <class 'str'>")
+
+    return {'url': f"https://github.com/{match.group("repo")}"}
 
 git_scheme:SchemeEntry = {
         "tags": ("git",),
@@ -26,7 +25,7 @@ git_scheme:SchemeEntry = {
             "display_text": f"{colors.rgb_color(0,255,115)}{m.group(0)}{colors.reset_color}",
             "tag": "git"
         },
-        "regex": re.compile(r"(ssh://)?git@\S*")
+        "regex": re.compile(r"(ssh://)?git@(?P<repo>\S*)")
     }
 
 # <<< GIT SCHEME <<<
@@ -56,7 +55,7 @@ def code_error_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
 
     return {"display_text": display_text, "tag": tag}
 
-def code_error_post_handler(match:re.Match[str]) -> tuple[str,...]:
+def code_error_post_handler(match:re.Match[str]) -> dict[str,str]:
     # Handle error messages appearing on the command line
     # and create an appropriate link to open the affected file 
 
@@ -70,7 +69,7 @@ def code_error_post_handler(match:re.Match[str]) -> tuple[str,...]:
 
     line=match.group('line')
 
-    return (f"{resolved_path.resolve()}:{line}",)
+    return {'file':str(resolved_path.resolve()), 'line':line}
 
 code_error_scheme:SchemeEntry = {
             "tags": ("code err.","Python"),
@@ -126,7 +125,7 @@ def file_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
     else:
         return None
 
-def file_post_handler(match:re.Match[str]) -> tuple[str,...]:
+def file_post_handler(match:re.Match[str]) -> list[str]:
 
     # Get the matched file path
     link1:str = match.group('link1')
@@ -144,33 +143,25 @@ def file_post_handler(match:re.Match[str]) -> tuple[str,...]:
     resolved_path_str = str(resolved_path.resolve())
 
     is_binary=True # we assume a binary file as the fallback case
-    if resolved_path.is_file:
-        if MAGIC_AVAILABLE:
-            # Use `magic` to get the MIME type of the file
-            mime = magic.Magic(mime=True)
-            mime_type = mime.from_file(str(resolved_path))
-            if mime_type.startswith('text/'):
-                is_binary = False  
-        else:
-            # Open the file in binary mode and read a portion of it
-            with resolved_path.open('rb') as file:
-                chunk = file.read(1024)  # Read the first 1024 bytes
-                if b'\0' not in chunk:      # Check for null bytes
-                    is_binary = False
+    if resolved_path.is_file():
+        # Open the file in binary mode and read a portion of it
+        with resolved_path.open('rb') as file:
+            chunk = file.read(1024)  # Read the first 1024 bytes
+            if b'\0' not in chunk:      # Check for null bytes
+                is_binary = False
 
     if is_binary:
         if sys.platform == "darwin":
-            return ('open','-R', resolved_path_str,)
+            return ['open','-R', resolved_path_str]
         elif sys.platform == "linux":
-            return ('xdg-open', resolved_path_str,)
+            return ['xdg-open', resolved_path_str]
         elif sys.platform == "win32":
-            return ('explorer', resolved_path_str,)
+            return ['explorer', resolved_path_str]
         else:
             raise NotSupportedPlatform(f"platform {sys.platform} not supported")
     else:
-        args = shlex.split(configs.editor_open_cmd)
-        args.append(resolved_path_str)
-        return tuple(args)
+        args = shlex.split(configs.editor_open_cmd.replace(f"%file",resolved_path_str).replace(f"%line","1"))
+        return args
 
 file_scheme:SchemeEntry = {
         "tags": ("file","dir"),
