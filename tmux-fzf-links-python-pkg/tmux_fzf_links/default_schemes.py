@@ -25,7 +25,7 @@ git_scheme:SchemeEntry = {
             "display_text": f"{colors.rgb_color(0,255,115)}{m.group(0)}{colors.reset_color}",
             "tag": "git"
         },
-        "regex": re.compile(r"(ssh://)?git@(?P<repo>\S*)")
+        "regex": re.compile(r"(ssh://)?git@(?P<repo>[^ \t\n\"\'\)\]\}]*)")
     }
 
 # <<< GIT SCHEME <<<
