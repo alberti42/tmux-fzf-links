@@ -4,13 +4,15 @@
 
 import shutil
 import re
-import os
 import subprocess
 from enum import Enum
 from typing import Callable,TypedDict
 import shlex
 
 from .errors_types import CommandFailed, NoSuitableAppFound
+
+def parse_editor_open_cmd(editor_open_cmd:str,file:str,line:str="1") -> str:
+    return editor_open_cmd.replace("%%file",file).replace("%%line",line)
 
 class OpenerType(Enum):
     EDITOR = 0
