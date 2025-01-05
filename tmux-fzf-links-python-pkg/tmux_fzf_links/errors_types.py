@@ -2,6 +2,9 @@
 #   Author: (c) 2024 Andrea Alberti
 #===============================================================================
 
+class MissingPostHandler(Exception):
+    """Raise exception when the post-handler is missing for a Custom opener type"""
+
 class NotSupportedPlatform(Exception):
     """Raise exception when the current platform is not supported"""
 

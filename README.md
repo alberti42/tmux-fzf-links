@@ -121,8 +121,8 @@ Default options are already provided. However, you can customize all options by 
 # === tmux-fzf-links ===
 set-option -g @fzf-links-key o
 set-option -g @fzf-links-history-lines "0"
-set-option -g @fzf-links-editor-open-cmd "tmux new-window -n 'emacs' /usr/local/bin/emacs"
-set-option -g @fzf-links-browser-open-cmd "/path/to/browser"
+set-option -g @fzf-links-editor-open-cmd "tmux new-window -n 'emacs' /usr/local/bin/emacs +%line '%file'"
+set-option -g @fzf-links-browser-open-cmd "/path/to/browser '%url'"
 set-option -g @fzf-links-fzf-display-options "-w 100% --maxnum-displayed 20 --multi -0 --no-preview"
 set-option -g @fzf-links-path-extension "/usr/local/bin"
 set-option -g @fzf-links-loglevel-tmux "WARNING"
@@ -139,7 +139,21 @@ run-shell "~/.local/share/tmux-fzf-links/fzf-links.tmux"
 
 ### Notes
 
-1. **`@fzf-links-fzf-display-options`**:  
+1. **`@fzf-links-editor-open-cmd`**: This option specifies the command for opening the editor. In the command, the placeholders `%file` and `%line` are automatically replaced with the fully-resolved file path and the line number, respectively. Note that in general editors have  different syntax to specify how to open a file at a given line.
+
+   To open a terminal-based editor, such as Emacs or Vim, use `tmux new-window` to ensure the editor opens in a new tmux window. Example:  
+   ```tmux
+   set-option -g @fzf-links-editor-open-cmd 'tmux new-window -n "emacs" /usr/local/bin/emacs'
+   ```
+
+   For desktop applications, such as Sublime Text, you can directly provide the path to the editor. Example:  
+   ```tmux
+   set-option -g @fzf-links-editor-open-cmd '/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl'
+   ```
+
+2. **`fzf-links-browser-open-cmd`**: This option specifies the command for opening the browser. User `%url` as the placeholder for the url to be opened.
+
+3. **`@fzf-links-fzf-display-options`**:  
    This option specifies the arguments passed to `fzf-tmux` and, subsequently, to `fzf`. Refer to the respective man pages of [`fzf-tmux`](https://github.com/junegunn/fzf#fzf-tmux) and [`fzf`](https://github.com/junegunn/fzf#options) for detailed documentation of the available arguments.
 
    - **`--maxnum-displayed`**: A custom option added by this plugin to limit the maximum number of items displayed in the `fzf` popup. If the total matches exceed this number, the plugin ensures that only up to `--maxnum-displayed` items are shown. This is particularly helpful for avoiding oversized popups when many matches are present.
@@ -151,28 +165,17 @@ run-shell "~/.local/share/tmux-fzf-links/fzf-links.tmux"
    set-option -g @fzf-links-fzf-display-options '-w 100% --maxnum-displayed 10 --multi -0 --no-preview'
    ```
 
-2. **`@fzf-links-editor-open-cmd`**:  
-   To open a terminal-based editor, such as Emacs or Vim, use `tmux new-window` to ensure the editor opens in a new tmux window. Example:  
-   ```tmux
-   set-option -g @fzf-links-editor-open-cmd 'tmux new-window -n "emacs" /usr/local/bin/emacs'
-   ```
+4. **`history-lines`**: An integer number determining how many extra lines of history to consider. By default, it is set to 0.
 
-   For desktop applications, such as Sublime Text, you can directly provide the path to the editor. Example:  
-   ```tmux
-   set-option -g @fzf-links-editor-open-cmd '/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl'
-   ```
+5. **`@fzf-links-ls-colors-filename`**: This option is not strictly necessary if `$LS_COLORS` is available in the environment. Use it only if `tmux` is launched directly as the first process in the terminal, bypassing the shell initialization where `$LS_COLORS` is set.
 
-3. **`history-lines`**: An integer number determining how many extra lines of history to consider. By default, it is set to 0.
-
-4. **`@fzf-links-ls-colors-filename`**: This option is not strictly necessary if `$LS_COLORS` is available in the environment. Use it only if `tmux` is launched directly as the first process in the terminal, bypassing the shell initialization where `$LS_COLORS` is set.
-
-5. **`@fzf-links-path-extension`**: This option is also not strictly necessary. It is only required if `fzf-tmux` or `tmux` binaries are not in the `$PATH` that was available when `tmux` started. The plugin only requires these two processes.
+6. **`@fzf-links-path-extension`**: This option is also not strictly necessary. It is only required if `fzf-tmux` or `tmux` binaries are not in the `$PATH` that was available when `tmux` started. The plugin only requires these two processes.
 
 Replace the placeholders with appropriate paths and commands for your environment.
 
-6. **`fzf-links-python`** and **`fzf-links-python-path`**: These two options allow specifying the path to the Python interpreter and, if needed, to a Python `site-packages` directory, which is appended to `$PYTHONPATH`. The plugin does not rely on any external dependencies. It makes use of the `python-magic` module when this module is available in `site-packages`. Moreover, you may want to import external modules installed in `site-packages` to extend the functionality of the plugin in `user_schemes`.
+7. **`fzf-links-python`** and **`fzf-links-python-path`**: These two options allow specifying the path to the Python interpreter and, if needed, to a Python `site-packages` directory, which is appended to `$PYTHONPATH`. The plugin does not rely on any external dependencies. However, you may want to import external modules installed in `site-packages` to extend the functionality of the plugin in `user_schemes`.
 
-7. 🔍 **Logging**:
+8. 🔍 **Logging**:
 
    Control logging levels via these options:
 
@@ -289,71 +292,110 @@ You can overwrite existing default schemes by defining a new scheme in `user_sch
 
 ### Customizing Post-Handlers
 
-The `post_handler` is responsible for generating the arguments passed to the configured `opener` when a link is selected. It returns a **tuple of strings** where:
+The `post_handler` function determines the command to execute for the selected link. Depending on the `opener`, it can return:
 
-1. Each element in the tuple represents an argument for the opener.
-2. When the `opener` is set to `OpenerType.CUSTOM`, the **first element** in the tuple must specify the path to the opener executable itself.
+- **A dictionary (`dict[str, str]`)**: When the `opener` is set to `OpenerType.EDITOR` or `OpenerType.BROWSER`, the dictionary must include fields required by the specific opener:
+  - For `OpenerType.EDITOR`, the dictionary must include:
+    - **`file`**: The fully-resolved file path.
+    - **`line`** (optional): The line number to open in the editor.
+  - For `OpenerType.BROWSER`, the dictionary must include:
+    - **`url`**: The URL to open in the browser.
 
-For example, in the **file scheme**:
+- **A list of strings (`list[str]`)**: When the `opener` is set to `OpenerType.CUSTOM`, the list contains the arguments directly passed to `subprocess.Popen` for execution. The first element of the list must specify the path to the custom opener executable.
+
+#### Example: Handling URLs
+
+For a browser opener, the `post_handler` can return a dictionary with the `url` field:
 
 ```python
-def file_post_handler(match: re.Match[str]) -> tuple[str, ...]:
-    file_path_str = match.group(0)
-    resolved_path = heuristic_find_file(file_path_str)
-
-    if resolved_path is None:
-        raise NotSupportedPlatform(f"Cannot resolve the file path: {file_path_str}")
-
-    if sys.platform == "darwin":
-        # For macOS, use 'open -R' to reveal the file in Finder
-        return ("open", "-R", str(resolved_path))
-    elif sys.platform == "linux":
-        # For Linux, use 'xdg-open'
-        return ("xdg-open", str(resolved_path))
-    elif sys.platform == "win32":
-        # For Windows, use 'explorer'
-        return ("explorer", str(resolved_path))
-    else:
-        raise NotSupportedPlatform(f"Platform {sys.platform} not supported")
+def ip_post_handler(match: re.Match[str]) -> dict[str, str]:
+    ip_addr_str = match.group("ip")
+    return {"url": f"https://{ip_addr_str}"}
 ```
 
-In this example:
-
-- The `opener` is configured as `OpenerType.CUSTOM`.
-- The first element of the returned tuple (`"open"`, `"xdg-open"`, or `"explorer"`) specifies the opener executable.
-- Subsequent elements specify additional arguments to pass to the opener.
-
-For simpler cases like URLs, the `post_handler` might return `None` if no additional processing is required, as shown in the **URL scheme**:
+The corresponding scheme:
 
 ```python
-url_scheme: SchemeEntry = {
-    "tags": ("url",),
+ip_scheme: SchemeEntry = {
+    "tags": ("IPv4",),
     "opener": OpenerType.BROWSER,
-    "regex": re.compile(r"https?://[^\s]+"),
+    "regex": re.compile(r"[0-9]{1,3}(\.[0-9]{1,3}){3}"),
     "pre_handler": lambda m: {
-        "display_text": f"{colors.rgb_color(200,0,255)}{m.group(0)}{colors.reset_color}",
-        "tag": "url",
+        "display_text": m.group("ip"),
+        "tag": "IPv4"
     },
-    "post_handler": None,
+    "post_handler": ip_post_handler,
 }
 ```
 
-If more advanced processing is needed, such as modifying the matched text or resolving paths, the `post_handler` can dynamically generate the tuple based on the match, as shown in the **code error scheme**:
+#### Example: Handling Code Errors
+
+For an editor opener, the `post_handler` can return a dictionary with the `file` and `line` fields:
 
 ```python
-def code_error_post_handler(match: re.Match[str]) -> tuple[str, ...]:
+def code_error_post_handler(match: re.Match[str]) -> dict[str, str]:
     file = match.group("file")
     line = match.group("line")
 
     resolved_path = heuristic_find_file(file)
     if resolved_path is None:
-        raise FailedResolveCodePath(f"Could not resolve the path of: {file}")
+        raise FailedResolvePath(f"Could not resolve the path of: {file}")
 
-    # Return the path with the line number for the editor
-    return (f"{resolved_path.resolve()}:{line}",)
+    return {"file": str(resolved_path.resolve()), "line": line}
 ```
 
-The flexibility of `post_handler` allows for tailored actions depending on the match and the platform.
+The corresponding scheme:
+
+```python
+code_error_scheme: SchemeEntry = {
+    "tags": ("code err.", "Python"),
+    "opener": OpenerType.EDITOR,
+    "regex": re.compile(r"File \"(?P<file>...*?)\", line (?P<line>[0-9]+)"),
+    "pre_handler": code_error_pre_handler,
+    "post_handler": code_error_post_handler,
+}
+```
+
+#### Example: Handling Files and Directories
+
+For a custom opener, the `post_handler` returns a list of arguments directly passed to `subprocess.Popen`. The first element specifies the custom opener executable:
+
+```python
+def file_post_handler(match: re.Match[str]) -> list[str]:
+    file_path_str = match.group("link1") or match.group("link2")
+    resolved_path = heuristic_find_file(file_path_str)
+
+    if resolved_path is None:
+        raise FailedResolvePath(f"Could not resolve the path of: {file_path_str}")
+
+    resolved_path_str = str(resolved_path.resolve())
+
+    if resolved_path.is_file():
+        # Use a configured editor to open the file
+        return shlex.split(configs.editor_open_cmd.replace("%file", resolved_path_str).replace("%line", "1"))
+    else:
+        # Open the directory in Finder (macOS), Nautilus (Linux), or Explorer (Windows)
+        if sys.platform == "darwin":
+            return ["open", "-R", resolved_path_str]
+        elif sys.platform == "linux":
+            return ["xdg-open", resolved_path_str]
+        elif sys.platform == "win32":
+            return ["explorer", resolved_path_str]
+        else:
+            raise NotSupportedPlatform(f"Platform {sys.platform} not supported")
+```
+
+The corresponding scheme:
+
+```python
+file_scheme: SchemeEntry = {
+    "tags": ("file", "dir"),
+    "opener": OpenerType.CUSTOM,
+    "regex": re.compile(r"(\'(?P<link1>\~?[a-zA-Z0-9_\/\-\:\. ]+)\'|(?P<link2>\~?[a-zA-Z0-9_\/\-\:\.]+))"),
+    "pre_handler": file_pre_handler,
+    "post_handler": file_post_handler,
+}
+```
 
 ---
 

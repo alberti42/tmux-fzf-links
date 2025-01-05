@@ -17,8 +17,8 @@ from .colors import colors
 from .configs import configs
 from typing import override
 
-from .opener import PreHandledMatch, open_link, SchemeEntry
-from .errors_types import CommandFailed, FailedChDir, FzfError, FzfUserInterrupt, NoSuitableAppFound, PatternNotMatching, LsColorsNotConfigured
+from .opener import OpenerType, PreHandledMatch, open_link, SchemeEntry
+from .errors_types import CommandFailed, FailedChDir, FzfError, FzfUserInterrupt, MissingPostHandler, NoSuitableAppFound, PatternNotMatching, LsColorsNotConfigured
 from .default_schemes import default_schemes
 
 def set_up_logger(loglevel_tmux:str,loglevel_file:str,log_filename:str) -> logging.Logger:
@@ -388,8 +388,12 @@ def run(
             if post_handler:
                 post_handled_link = post_handler(match)    
             else:
-                post_handled_link = {'file':match.group(0)}
-            
+                if scheme["opener"] == OpenerType.EDITOR:
+                    post_handled_link = {'file':match.group(0)}
+                elif scheme["opener"] == OpenerType.BROWSER:
+                    post_handled_link = {'url':match.group(0)}
+                else:
+                    raise MissingPostHandler(f"scheme with tags {scheme["tags"]} configured as custom opener but missing post handler")
             try:
                 open_link(editor_open_cmd,browser_open_cmd,post_handled_link, schemes[index_scheme]["opener"])
             except (NoSuitableAppFound, PatternNotMatching, CommandFailed) as e:
@@ -407,7 +411,7 @@ if __name__ == "__main__":
         run(*sys.argv[1:])
     except KeyboardInterrupt:
         logging.info("script interrupted")
-    except FailedChDir as e:
+    except (FailedChDir,MissingPostHandler) as e:
         logging.error(f"{e}")
     except Exception as e:
         logging.error(f"unexpected runtime error: {e}")
