@@ -145,6 +145,8 @@ set-option -g @fzf-links-use-colors on
 run-shell "~/.local/share/tmux-fzf-links/fzf-links.tmux"
 ```
 
+Comment out the options you find useful and replace the placeholders with appropriate paths and commands for your environment.
+
 ### Notes
 
 1. **`@fzf-links-editor-open-cmd`**: This option specifies the command for opening the editor. In the command, the placeholders `%file` and `%line` are automatically replaced with the fully-resolved file path and the line number, respectively. Note that in general editors have  different syntax to specify how to open a file at a given line.
@@ -177,8 +179,6 @@ run-shell "~/.local/share/tmux-fzf-links/fzf-links.tmux"
 5. **`@fzf-links-ls-colors-filename`**: This option is not strictly necessary if `$LS_COLORS` is available in the environment. Use it only if `tmux` is launched directly as the first process in the terminal, bypassing the shell initialization where `$LS_COLORS` is set.
 
 6. **`@fzf-links-path-extension`**: This option is also not strictly necessary. It is only required if `fzf-tmux` or `tmux` binaries are not in the `$PATH` that was available when `tmux` started. The plugin only requires these two processes.
-
-Replace the placeholders with appropriate paths and commands for your environment.
 
 7. **`fzf-links-python`** and **`fzf-links-python-path`**: These two options allow specifying the path to the Python interpreter and, if needed, to a Python `site-packages` directory, which is appended to `$PYTHONPATH`. The plugin does not rely on any external dependencies. However, you may want to import external modules installed in `site-packages` to extend the functionality of the plugin in `user_schemes`.
 
