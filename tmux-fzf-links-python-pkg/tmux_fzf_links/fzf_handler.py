@@ -76,4 +76,4 @@ def run_fzf(fzf_display_options:str,choices: list[str],use_ls_colors:bool) -> su
         # Allow exit code 130 for user cancellation; see fzf manual
         raise FzfUserInterrupt()
     else:
-        raise FzfError(f"fzf failed with exit code {result.returncode}: {result.stderr}", result.returncode)   
+        raise FzfError(f"fzf failed with exit code {result.returncode}: {result.stderr}")   

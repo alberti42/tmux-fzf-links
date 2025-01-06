@@ -31,10 +31,7 @@ class FzfUserInterrupt(Exception):
 
 class FzfError(Exception):
     """Raise exception when fzf fails"""
-    def __init__(self, message: str, returncode: int) -> None:
-        super().__init__(message)
-        self.returncode:int = returncode
-
+    
 class LsColorsNotConfigured(Exception):
     """Raise exception when LS_COLORS could not be configured"""
 
