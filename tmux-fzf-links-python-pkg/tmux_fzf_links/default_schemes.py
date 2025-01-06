@@ -11,11 +11,15 @@ from .errors_types import NotSupportedPlatform, FailedResolvePath
 # >>> GIT SCHEME >>>
 
 def git_post_handler(match:re.Match[str]) -> dict[str,str]:
+    server = match.group("server")
+    if not isinstance(server,str):
+        raise ValueError(f"github repository of type {type(server)} but expect of type <class 'str'>")
+
     repo = match.group("repo")
     if not isinstance(repo,str):
         raise ValueError(f"github repository of type {type(repo)} but expect of type <class 'str'>")
 
-    return {'url': f"https://github.com/{match.group("repo")}"}
+    return {'url': f"https://{server}/{repo}"}
 
 git_scheme:SchemeEntry = {
         "tags": ("git",),
@@ -25,7 +29,7 @@ git_scheme:SchemeEntry = {
             "display_text": f"{colors.rgb_color(0,255,115)}{m.group(0)}{colors.reset_color}",
             "tag": "git"
         },
-        "regex": re.compile(r"(ssh://)?git@(?P<repo>[^ \t\n\"\'\)\]\}]*)")
+        "regex": re.compile(r"(ssh://)?git@(?P<server>[^ \t\n\"\'\)\]\}]+)\:(?P<repo>[^ \t\n\"\'\)\]\}]+)")
     }
 
 # <<< GIT SCHEME <<<
