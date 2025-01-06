@@ -224,8 +224,6 @@ The plugin uses a **list of dictionaries** to define schemes, where each diction
   If the match is invalid or false-positive, the `pre_handler` can return `None` to drop the match.
 - **`post_handler`**: A function that determines the command to execute for the selected link.
 
-Here’s an example of the updated structure:
-
 ```python
 default_schemes = [
     {
@@ -248,14 +246,18 @@ default_schemes = [
 ]
 ```
 
-### Customizing Pre-Handlers
+### Adding User-Defined Schemes
+
+You can define additional schemes in a file such as `user_schemes.py`. Specify the path to your `user_schemes.py` file in your `.tmux.conf` configuration.
+
+#### Customizing Pre-Handlers
 
 The `pre_handler` processes matches before they are displayed in the fzf interface. It must return a dictionary with:
 
 - **`display_text`**: A string containing the formatted text for fzf, including colors if configured.
 - **`tag`**: A string that must be one of the scheme's `tags`.
 
-#### Dropping False Positives
+##### Dropping False Positives
 
 To handle false positives, the `pre_handler` can return `None`. For example:
 
@@ -272,7 +274,7 @@ def code_error_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
 ```
 In this example, matches are dropped if the file path cannot be resolved.
 
-#### Dynamic Tag Assignment
+##### Dynamic Tag Assignment
 
 Dynamic tag assignment allows `pre_handler` to adjust tags based on the match content. For example:
 
@@ -288,22 +290,7 @@ Dynamic tag assignment allows `pre_handler` to adjust tags based on the match co
   tag = "dir" if resolved_path.is_dir() else "file"
   ```
 
-#### Disabling Default Schemes
-
-You can disable specific default schemes by populating the `rm_default_schemes` list in your `user_schemes.py` file. For example:
-
-```python
-# Remove default schemes (e.g., ["file"] to remove tag "file")
-rm_default_schemes: list[str] = ["file", "dir"]
-```
-
-When you add a tag to `rm_default_schemes`, all schemes associated with that tag will be disabled. If a scheme has multiple tags, specifying any one of them will disable the entire scheme. **It is not possible to disable just one tag from a multi-tag scheme while keeping other tags active.**
-
-### Overwriting Default Schemes
-
-You can overwrite existing default schemes by defining a new scheme in `user_schemes.py` with at least one of the tags used in the default scheme. The plugin gives precedence to user-defined schemes over default ones.
-
-### Customizing Post-Handlers
+#### Customizing Post-Handlers
 
 The `post_handler` function determines the command to execute for the selected link. Depending on the `opener`, it can return:
 
@@ -316,9 +303,9 @@ The `post_handler` function determines the command to execute for the selected l
 
 - **A list of strings (`list[str]`)**: When the `opener` is set to `OpenerType.CUSTOM`, the list contains the arguments directly passed to `subprocess.Popen` for execution. The first element of the list must specify the path to the custom opener executable.
 
-#### Example: Handling URLs
+##### Example: Handling URLs
 
-For a browser opener, the `post_handler` can return a dictionary with the `url` field:
+For a browser opener (`OpenerType.BROWSER`), the `post_handler` can return a dictionary with the `url` field:
 
 ```python
 def ip_post_handler(match: re.Match[str]) -> dict[str, str]:
@@ -332,7 +319,7 @@ The corresponding scheme:
 ip_scheme: SchemeEntry = {
     "tags": ("IPv4",),
     "opener": OpenerType.BROWSER,
-    "regex": re.compile(r"[0-9]{1,3}(\.[0-9]{1,3}){3}"),
+    "regex": re.compile(r"(?<!://)(?P<ip>\b(?:\d{1,3}\.){3}\d{1,3}\b(:\d+)?)")
     "pre_handler": lambda m: {
         "display_text": m.group("ip"),
         "tag": "IPv4"
@@ -341,9 +328,9 @@ ip_scheme: SchemeEntry = {
 }
 ```
 
-#### Example: Handling Code Errors
+##### Example: Handling Code Errors
 
-For an editor opener, the `post_handler` can return a dictionary with the `file` and `line` fields:
+For an editor opener (`OpenerType.EDITOR`), the `post_handler` can return a dictionary with the `file` and `line` fields:
 
 ```python
 def code_error_post_handler(match: re.Match[str]) -> dict[str, str]:
@@ -369,9 +356,9 @@ code_error_scheme: SchemeEntry = {
 }
 ```
 
-#### Example: Handling Files and Directories
+##### Example: Handling Files and Directories
 
-For a custom opener, the `post_handler` returns a list of arguments directly passed to `subprocess.Popen`. The first element specifies the custom opener executable:
+For a custom opener (`OpenerType.CUSTOM`), the `post_handler` returns a list of arguments directly passed to `subprocess.Popen`. The first element specifies the custom opener executable:
 
 ```python
 def file_post_handler(match: re.Match[str]) -> list[str]:
@@ -410,28 +397,20 @@ file_scheme: SchemeEntry = {
 }
 ```
 
----
+#### Overwriting Default Schemes
 
-### Adding User-Defined Schemes
+You can overwrite existing default schemes by defining a new scheme in `user_schemes.py` with at least one of the tags used in the default scheme. The plugin gives precedence to user-defined schemes over default ones.
 
-You can define additional schemes in a file such as `user_schemes.py`. Example:
+#### Disabling Default Schemes
+
+You can disable specific default schemes by populating the `rm_default_schemes` list in your `user_schemes.py` file. For example:
 
 ```python
-user_schemes = [
-    {
-        "tags": ("IPv4",),
-        "opener": OpenerType.BROWSER,
-        "regex": re.compile(r"[0-9]{1,3}(\.[0-9]{1,3}){3}"),
-        "pre_handler": lambda m: {
-            "display_text": m.group("ip"),
-            "tag": "IPv4"
-        },
-        "post_handler": ip_post_handler,
-    },
-]
+# Remove default schemes (e.g., ["file"] to remove tag "file")
+rm_default_schemes: list[str] = ["file", "dir"]
 ```
 
-Specify the path to your `user_schemes.py` file in your `.tmux.conf` configuration.
+When you add a tag to `rm_default_schemes`, all schemes associated with that tag will be disabled. If a scheme has multiple tags, specifying any one of them will disable the entire scheme. **It is not possible to disable just one tag from a multi-tag scheme while keeping other tags active.**
 
 ---
 
