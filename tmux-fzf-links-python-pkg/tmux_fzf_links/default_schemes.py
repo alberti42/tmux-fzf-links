@@ -102,6 +102,10 @@ def file_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
     # Get the matched file path
     file_path_str = match.group("link1") or match.group("link2")
 
+    # Drop matches containing only `.` such as current and previous folder
+    if all(char == '.' for char in file_path_str):
+        return None
+
     # Return the fully resolved path
     resolved_path = heuristic_find_file(file_path_str)
     

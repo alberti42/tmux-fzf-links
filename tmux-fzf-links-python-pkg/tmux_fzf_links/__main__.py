@@ -286,13 +286,14 @@ def run(
     # We use the unique set as an expedient to sort over
     # pre_handled_text while keeping the original text
     seen:set[str] = set()
-    items:list[tuple[PreHandledMatch,str]] = []
+    items:list[tuple[PreHandledMatch,str,int]] = []
 
     # Process each scheme
     for scheme in schemes:
         # Use regex.finditer to iterate over all matches
         for match in scheme['regex'].finditer(content):
             entire_match = match.group(0)
+            match_start = match.start()
             # Extract the match string
             pre_handled_match:PreHandledMatch | None
             if scheme['pre_handler']:
@@ -303,7 +304,8 @@ def run(
                     "display_text": entire_match,
                     "tag": scheme["tags"][0]
                 }
-            # Drop matches for which the pre_handler returns None
+            # Skip matches for which the pre_handler returns None
+            # Skip matches for texts that has already been processed by a previous scheme
             if pre_handled_match and entire_match not in seen:
                 if pre_handled_match["tag"] not in scheme["tags"]:
                     logger.warning(f"the dynamically returned '{pre_handled_match["tag"]}' is not included in: {scheme["tags"]}")
@@ -311,7 +313,7 @@ def run(
 
                 seen.add(entire_match)
                 # We keep a copy of the original matched text for later
-                items.append((pre_handled_match,entire_match,))
+                items.append((pre_handled_match,entire_match,match_start,))
     # Clean up no longer needed variables
     del seen
     
@@ -319,16 +321,13 @@ def run(
         logger.info('no link found')
         return
 
+    # Sort items
+    sorted_choices = items
+    items.sort(key=lambda x: x[2],reverse=True)
+
     # Find the maximum length in characters of the display text
     max_len_tag_names:int = max([len(item[0]["tag"]) for item in items])
         
-    # Sort items; it is better not to sort the matches alphabetically if we want to preserve
-    # the same order of appearance on the screen. For now, this possibility is disabled. We could
-    # enable it later by providing an option for the user to decide.
-    # sorted_choices = sorted(items, key=lambda x: x[0])
-    sorted_choices = items
-    sorted_choices.reverse()
-
     # Number the items
     numbered_choices = [f"{colors.index_color}{idx:4d}{colors.reset_color} {colors.dash_color}-{colors.reset_color} " \
         f"{colors.tag_color}{('['+item[0]["tag"]+']').ljust(max_len_tag_names+2)}{colors.reset_color} {colors.dash_color}-{colors.reset_color} " \
