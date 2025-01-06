@@ -31,7 +31,7 @@ class FzfUserInterrupt(Exception):
 
 class FzfError(Exception):
     """Raise exception when fzf fails"""
-    
+
 class LsColorsNotConfigured(Exception):
     """Raise exception when LS_COLORS could not be configured"""
 

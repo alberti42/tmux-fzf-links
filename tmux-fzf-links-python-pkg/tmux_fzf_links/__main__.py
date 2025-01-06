@@ -345,7 +345,7 @@ def run(
         sys.exit(0)    
 
     # Process selected items
-    selected_choices = result.stdout.splitlines()
+    selected_choices = result.splitlines()
 
     # Regular expression to parse the selected item from the fzf options
     # Each line is in the format {four-digit number, two spaces <scheme type>, two spaces, <link>
