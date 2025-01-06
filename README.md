@@ -201,6 +201,18 @@ Comment out the options you find useful and replace the placeholders with approp
    - `@fzf-links-loglevel-file`: Set log verbosity for file logs.
    - `@fzf-links-log-filename`: Specify the log file location. Omit this property or set it to an empty string to prevent logging to file.
 
+### Tmux popup borders
+
+By design, the tmux popup is shown with a border around it. We suggest customizing its appearance by adding to your `.tmux.conf`:
+
+```tmux
+set-option -g popup-border-lines rounded
+set-option -g popup-style "bg=#24273a,fg=#cad3f5"
+set-option -g popup-border-style "bg=#24273a,fg=#00bbff"
+```
+
+Adjust the colors as you like them. Also, if you use customization themes, make sure to add these commands after the customization theme in your tmux, or else these settings will likely be overwritten by your theme.
+
 ---
 
 ## 🖱️ Usage
