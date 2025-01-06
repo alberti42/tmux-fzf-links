@@ -3,18 +3,17 @@
 #===============================================================================
 
 import shlex
-from .errors_types import FailedTmuxPaneHeight, FzfError, FzfUserInterrupt
+from .errors_types import FailedTmuxPaneSize, FzfError, FzfUserInterrupt
 import subprocess
 import logging
 import tempfile
 import os
 
 def extract_option(cmd_user_args:list[str],option:str) -> str | None:
-    # get the user option defining the maximum number of matches to be
-    # displayed simultaneously in the fzf window
+    # extract the user option
 
     if option in cmd_user_args:
-        # Find the index of '--maxnum-displayed' and get the next argument
+        # Find the index of `option` and get the next argument
         option_index = cmd_user_args.index(option)
         option_arg = cmd_user_args[option_index + 1]
 
@@ -23,12 +22,24 @@ def extract_option(cmd_user_args:list[str],option:str) -> str | None:
         cmd_user_args.pop(option_index)  # Remove the argument (shifts due to first pop)
 
         return option_arg
-        # except (IndexError, ValueError):
-        #     # Handle missing or invalid value for '--maxnum-displayed'
-        #     raise FailedTmuxPaneHeight("option '--maxnum-displayed' is defined but its value is missing or invalid.")
     else:
         # `option` is not defined
         return None
+
+def parse_int_option(option_arg:str|None,ref_value:int|None) -> int|None:
+    if option_arg is None:
+        return None
+
+    if ref_value and option_arg.endswith('%'):
+        # Convert percentage to an integer based on the reference value
+        percentage = int(option_arg[:-1])  # Remove '%' and convert to int
+        int_value = ref_value * percentage // 100
+    else:
+        # Convert the argument directly to an integer
+        int_value = int(option_arg)
+
+    return int_value
+
 
 def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -> str:
     """Run fzf within a tmux popup with the given options and handle output via mkfifo."""
@@ -36,89 +47,145 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
     # Parse user options into a list
     cmd_user_args: list[str] = shlex.split(fzf_display_options)
 
+    VER_BORDER = 4 # number of characters taken by vertical border
+    HOR_BORDER = 2 # number of characters taken by horizontal border
+
+    # Command to launch tmux popup
+    tmux_popup_command:list[str] = [
+        "tmux", "popup",
+        "-E",  # Ensure the command runs interactively
+        "-B",  # No tmux popup border
+    ]
+
+    # Retrieve the current pane size
+    try:
+        pane_size_str:str = subprocess.check_output(
+            ('tmux', 'display', '-p', '#{pane_height},#{pane_width}',),
+            shell=False,
+            text=True,
+        )
+        pane_height, pane_width = map(int, pane_size_str.split(','))
+    except Exception as e:
+        raise FailedTmuxPaneSize(f"tmux pane size could not be determined: {e}")
+
+    # Set the x offset of the popup
+    try:
+        x_str = extract_option(cmd_user_args,'-x')
+        x = parse_int_option(x_str,None)
+    except (IndexError, ValueError):
+        raise FailedTmuxPaneSize("option '-x' is defined but its value is missing or invalid")
+    if x:
+        tmux_popup_command.extend(["-x", f"{x}"])
+
+    # Set the y offset of the popup
+    try:
+        y_str = extract_option(cmd_user_args,'-y')
+        y = parse_int_option(y_str,None)
+    except (IndexError, ValueError):
+        raise FailedTmuxPaneSize("option '-y' is defined but its value is missing or invalid")
+    if y:
+        tmux_popup_command.extend(["-y", f"{y}"])
+
+    # Set the width of the popup
+    try:
+        width_str = extract_option(cmd_user_args,'-w')
+        width = parse_int_option(width_str,pane_width-HOR_BORDER)
+    except (IndexError, ValueError):
+        raise FailedTmuxPaneSize("option '-w' is defined but its value is missing or invalid")
+    if width:
+        # Force at least one char
+        width = max(width,1)
+
+        # Adjust width for the fzf border
+        fzf_width = min(width + HOR_BORDER,pane_width)
+        tmux_popup_command.extend(["-w", f"{fzf_width}"])
+
+    # Get the height of the popup
+    try:
+        height_str = extract_option(cmd_user_args,'-h')
+        height = parse_int_option(height_str,pane_height-VER_BORDER)
+    except (IndexError, ValueError):
+        raise FailedTmuxPaneSize("option '-h' is defined but its value is missing or invalid")
+    
+    if height:
+        # Force at least one line
+        height = max(height,1)
+    else:
+        # If height is not specified in the options, the plugin dynamically
+        # computes the necessary popup height to fit all items
+        height = len(choices)  # Number of lines
+
     # Get the maximum number of matches to be displayed at once
-    maxnum_value_str = extract_option(cmd_user_args,'--maxnum-displayed')
-    if maxnum_value_str:
-        try:
-            if maxnum_value_str.endswith('%'):
-                # Convert percentage to an integer based on pane_height
-                percentage = int(maxnum_value_str[:-1])  # Remove '%' and convert to int
-
-                try:
-                    pane_height_str = subprocess.check_output(
-                        ('tmux', 'display', '-p', '#{pane_height}',),
-                        shell=False,
-                        text=True,
-                    )
-                    pane_height = int(pane_height_str)
-                except Exception as e:
-                    raise FailedTmuxPaneHeight(f"tmux pane height could not be determined: {e}")
-                
-                maxnum_value = pane_height * percentage // 100
-            else:
-                # Convert the argument directly to an integer
-                maxnum_value = int(maxnum_value_str)
-        except (IndexError, ValueError):
-            # Handle missing or invalid value for '--maxnum-displayed'
-            raise FailedTmuxPaneHeight("option '--maxnum-displayed' is defined but its value is missing or invalid.")
-
-
-
-    # Compute the required height
-    height = len(choices)  # Number of lines
-    if maxnum_value:
-        height = max(min(len(choices), maxnum_value), 1)
+    try:
+        maxnum_str = extract_option(cmd_user_args,'--maxnum-displayed')
+        maxnum = parse_int_option(maxnum_str,pane_height-VER_BORDER)
+    except (IndexError, ValueError):
+        raise FailedTmuxPaneSize("option '--maxnum-displayed' is defined but its value is missing or invalid")
+    if maxnum:
+        height = min(height,maxnum)
 
     # Adjust height for the fzf border
-    fzf_height = height + 4
+    fzf_height = min(height + VER_BORDER,pane_height)
+    tmux_popup_command.extend(["-h", f"{fzf_height}"])
 
     # Base fzf arguments
-    fzf_args = ['--no-sort']
+    fzf_args = ['--no-sort','--border']
     if use_ls_colors:
         fzf_args.append('--ansi')
 
-    
+    logging.debug(f"fzf_args: {fzf_args}")
+    logging.debug(f"tmux_popup_command: {tmux_popup_command}")
+    logging.debug(f"cmd_user_args: {cmd_user_args}")
+
     # Combine fzf arguments, giving user options higher priority
     cmd_args = fzf_args + cmd_user_args
 
-    # Create named pipes for stdout and stderr
-    stdout_pipe = tempfile.mktemp()
-    stderr_pipe = tempfile.mktemp()
-    os.mkfifo(stdout_pipe)
-    os.mkfifo(stderr_pipe)
+    # Create a temporary directory for the named pipes
+    with tempfile.TemporaryDirectory() as tmpdir:
+        logging.debug(f"TMP {tmpdir}")
+        # Paths for the named pipes
+        stdout_pipe = os.path.join(tmpdir, 'fzf_stdout')
+        stderr_pipe = os.path.join(tmpdir, 'fzf_stderr')
 
-    try:
+        # Create named pipes for stdout and stderr
+        os.mkfifo(stdout_pipe)
+        os.mkfifo(stderr_pipe)
+
+        # Choices → [stdin] → fzf (interactive UI on /dev/tty)
+        #           → [stdout] → Named Pipe (stdout_pipe)
+        #           → [stderr] → Named Pipe (stderr_pipe)
+        
         # Prepare the fzf command to run inside the tmux popup
-        fzf_command = f"echo -e \"{chr(10).join(choices)}\" | fzf {' '.join(shlex.quote(arg) for arg in cmd_args)} > {shlex.quote(stdout_pipe)} 2> {shlex.quote(stderr_pipe)}"
+        fzf_command = (
+            f"echo -e \"{chr(10).join(choices)}\" | "
+            f"fzf {' '.join(shlex.quote(arg) for arg in cmd_args)} "
+            f"> {shlex.quote(stdout_pipe)} 2> {shlex.quote(stderr_pipe)}"
+        )
 
-        # Command to launch tmux popup
-        tmux_popup_command = [
-            "tmux", "popup",
-            "-E",  # Ensure the command runs interactively
-            "-h", f"{fzf_height}",  # Height of the popup
-            "-w", "80%",  # Adjust width (default 80%)
-            fzf_command
-        ]
+        tmux_popup_command.append(fzf_command)
 
-        # Launch the tmux popup and start reading pipes in parallel
-        tmux_process = subprocess.Popen(tmux_popup_command, shell=False)
-        with open(stdout_pipe, 'r') as stdout_file, open(stderr_pipe, 'r') as stderr_file:
-            stdout = stdout_file.read().strip()
-            stderr = stderr_file.read().strip()
+        try:
+            # Start the tmux popup process
+            tmux_process = subprocess.Popen(tmux_popup_command, shell=False)
 
-        # Wait for the tmux popup to complete
-        tmux_process.wait()
-        logging.debug(f"RETURN {tmux_process.returncode}")
-        # Handle errors or user cancellation
-        if tmux_process.returncode == 0:
-            return stdout
-        elif tmux_process.returncode == 130:
-            raise FzfUserInterrupt("User canceled selection.")
-        else:
-            raise FzfError(f"fzf failed with exit code {tmux_process.returncode}: {stderr}")
+            # Open the named pipes for reading
+            with open(stdout_pipe, 'r') as stdout_file, open(stderr_pipe, 'r') as stderr_file:
+                # Read stdout and stderr in parallel
+                stdout = stdout_file.read().strip()
+                stderr = stderr_file.read().strip()
 
-    finally:
-        # Clean up the named pipes
-        for pipe in [stdout_pipe, stderr_pipe]:
-            if os.path.exists(pipe):
-                os.unlink(pipe)
+            # Wait for the tmux popup to complete
+            tmux_process.wait()
+
+            # Handle errors or user cancellation
+            if tmux_process.returncode == 0:
+                return stdout
+            elif tmux_process.returncode == 130:
+                raise FzfUserInterrupt("User canceled selection.")
+            else:
+                raise FzfError(f"fzf failed with exit code {tmux_process.returncode}: {stderr}")
+
+        finally:
+            # Named pipes are automatically cleaned up with the TemporaryDirectory
+            pass
+
