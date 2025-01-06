@@ -54,7 +54,6 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
     tmux_popup_command:list[str] = [
         "tmux", "popup",
         "-E",  # Ensure the command runs interactively
-        "-B",  # No tmux popup border
     ]
 
     # Retrieve the current pane size
@@ -129,7 +128,7 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
     tmux_popup_command.extend(["-h", f"{fzf_height}"])
 
     # Base fzf arguments
-    fzf_args = ['--no-sort','--border']
+    fzf_args = ['--no-sort']
     if use_ls_colors:
         fzf_args.append('--ansi')
 
