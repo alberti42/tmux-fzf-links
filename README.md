@@ -16,7 +16,7 @@ The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmu
 
 ## 🌟 Features
 
-- **Fuzzy Search Links**: Quickly locate and open links appearing in your terminal output.
+- **Fuzzy Search Links**: Quickly locate and open links appearing in your terminal output. Support multiple simultaneous choices.
 - **Default and Custom Schemes**: Use pre-configured schemes or define your own with custom handlers for pre- and post-processing.
 - **Integration with tmux Popup Windows**: Provides a seamless user experience within tmux sessions.
 - **Flexible Open Commands**: Configure your favorite editor, browser, or custom command to open links.
@@ -127,7 +127,7 @@ Default options are already provided. However, you can customize all options by 
 
 ```tmux
 # === tmux-fzf-links ===
-# set-option -g @fzf-links-key o
+# set-option -g @fzf-links-key C-h
 # set-option -g @fzf-links-history-lines "0"
 set-option -g @fzf-links-editor-open-cmd "tmux new-window -n 'emacs' /usr/local/bin/emacs +%line '%file'"
 set-option -g @fzf-links-browser-open-cmd "/path/to/browser '%url'"
@@ -140,7 +140,7 @@ set-option -g @fzf-links-python "python3"
 # set-option -g @fzf-links-python-path "~/.virtualenvs/my_special_venv/lib/python3.11/site-packages"
 # set-option -g @fzf-links-user-schemes-path "~/.tmux/plugins/tmux-fzf-links/user_schemes/user_schemes.py"
 set-option -g @fzf-links-use-colors on
-# set-option -g @fzf-links-ls-colors-filename "~/.cache/zinit/ls_colors.zsh"
+# set-option -g @fzf-links-ls-colors-filename "~/.cache/tmux-fzf-links/cached_ls_colors.txt"
 
 run-shell "~/.local/share/tmux-fzf-links/fzf-links.tmux"
 ```
@@ -184,7 +184,12 @@ Comment out the options you find useful and replace the placeholders with approp
 
 4. **`history-lines`**: An integer number determining how many extra lines of history to consider. By default, it is set to 0.
 
-5. **`@fzf-links-ls-colors-filename`**: This option is not strictly necessary if `$LS_COLORS` is available in the environment. Use it only if `tmux` is launched directly as the first process in the terminal, bypassing the shell initialization where `$LS_COLORS` is set.
+5. **`@fzf-links-ls-colors-filename`**: A file containing the content of $LS_COLORS. For example, you can save $LS_COLORS to a cached file using:
+	 ```bash
+	 printenv LS_COLORS > cached_ls_colors.txt
+	 ```
+
+	 Using such a file is not strictly necessary if `$LS_COLORS` is available in the environment. Use `@fzf-links-ls-colors-filename` only if `tmux` is launched directly as the first process in the terminal, bypassing the shell initialization where `$LS_COLORS` is set.
 
 6. **`@fzf-links-path-extension`**: This option is also not strictly necessary. It is only required if `fzf-tmux` or `tmux` binaries are not in the `$PATH` that was available when `tmux` started. The plugin only requires these two processes.
 
@@ -201,9 +206,10 @@ Comment out the options you find useful and replace the placeholders with approp
 ## 🖱️ Usage
 
 1. Start tmux.
-2. Press the configured key (default: `o` as for `open`) to activate **tmux-fzf-links**.
+2. Press `<prefix>` + the configured key (default: `C-h`; an easy-to-type key sequence; you can change it) to activate **tmux-fzf-links**.
 3. Select a link using the fuzzy search interface.
-4. The link will be opened using the configured command (editor, browser, or custom).
+4. Press `TAB` or `SHIFT-TAB` to select or deselect multiple choices
+4. The selected links will be opened using the configured command (editor, browser, or custom).
 
 ---
 

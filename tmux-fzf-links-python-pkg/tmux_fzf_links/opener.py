@@ -3,6 +3,7 @@
 #===============================================================================
 
 import shutil
+import logging
 import re
 import os
 import subprocess
@@ -73,6 +74,7 @@ def open_link(editor_open_cmd:str, browser_open_cmd:str, post_handled_match:Post
 
         args = shlex.split(cmd)
 
+    logging.debug(os.environ["PATH"])
     try:
         # Run the command and capture stdout and stderr
         proc = subprocess.Popen(
@@ -90,5 +92,9 @@ def open_link(editor_open_cmd:str, browser_open_cmd:str, post_handled_match:Post
         if proc.returncode != 0:
             raise CommandFailed(f"return code {proc.returncode}: {stderr.decode('utf-8')}")
 
+    except FileNotFoundError as e:
+        raise CommandFailed(f'could not find "{args[0]}" in the path')
+
     except Exception as e:
-        raise CommandFailed(f"failed to execute command '{" ".join(post_handled_match)}': {e}")
+        raise CommandFailed(f'failed to execute command "{cmd}"')
+
