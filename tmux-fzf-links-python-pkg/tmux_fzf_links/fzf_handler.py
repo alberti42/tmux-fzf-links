@@ -84,7 +84,7 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
 
     try:
         # Prepare the fzf command to run inside the tmux popup
-        fzf_command = f"echo -e \"{chr(10).join(choices)}\" | fzf {' '.join(shlex.quote(arg) for arg in cmd_args)} | tee {shlex.quote(output_path)}"
+        fzf_command = f"echo -e \"{chr(10).join(choices)}\" | fzf {' '.join(shlex.quote(arg) for arg in cmd_args)} > {shlex.quote(output_path)}"
 
         # Command to launch tmux popup
         tmux_popup_command = [
@@ -96,9 +96,7 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
         ]
 
         # Run the tmux popup command
-        tmux_result = subprocess.run(tmux_popup_command, shell=False, text=True)
-
-        logging.debug(f"FINISHED {tmux_result}")
+        tmux_result = subprocess.run(tmux_popup_command, shell=False)
 
         if tmux_result.returncode != 0:
             raise FzfError(f"tmux popup failed with exit code {tmux_result.returncode}")
