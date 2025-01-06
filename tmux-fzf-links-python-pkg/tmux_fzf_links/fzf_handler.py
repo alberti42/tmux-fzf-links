@@ -62,6 +62,8 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
             # Handle missing or invalid value for '--maxnum-displayed'
             raise FailedTmuxPaneHeight("option '--maxnum-displayed' is defined but its value is missing or invalid.")
 
+
+
     # Compute the required height
     height = len(choices)  # Number of lines
     if maxnum_value:
@@ -75,16 +77,19 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
     if use_ls_colors:
         fzf_args.append('--ansi')
 
+    
     # Combine fzf arguments, giving user options higher priority
     cmd_args = fzf_args + cmd_user_args
 
-    # Create a temporary file for the output
-    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
-        output_path = tmp_file.name
+    # Create named pipes for stdout and stderr
+    stdout_pipe = tempfile.mktemp()
+    stderr_pipe = tempfile.mktemp()
+    os.mkfifo(stdout_pipe)
+    os.mkfifo(stderr_pipe)
 
     try:
         # Prepare the fzf command to run inside the tmux popup
-        fzf_command = f"echo -e \"{chr(10).join(choices)}\" | fzf {' '.join(shlex.quote(arg) for arg in cmd_args)} > {shlex.quote(output_path)}"
+        fzf_command = f"echo -e \"{chr(10).join(choices)}\" | fzf {' '.join(shlex.quote(arg) for arg in cmd_args)} > {shlex.quote(stdout_pipe)} 2> {shlex.quote(stderr_pipe)}"
 
         # Command to launch tmux popup
         tmux_popup_command = [
@@ -95,23 +100,25 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
             fzf_command
         ]
 
-        # Run the tmux popup command
-        tmux_result = subprocess.run(tmux_popup_command, shell=False)
+        # Launch the tmux popup and start reading pipes in parallel
+        tmux_process = subprocess.Popen(tmux_popup_command, shell=False)
+        with open(stdout_pipe, 'r') as stdout_file, open(stderr_pipe, 'r') as stderr_file:
+            stdout = stdout_file.read().strip()
+            stderr = stderr_file.read().strip()
 
-        if tmux_result.returncode != 0:
-            raise FzfError(f"tmux popup failed with exit code {tmux_result.returncode}")
-
-        # Read the result from the temporary file
-        with open(output_path, 'r') as output_file:
-            result = output_file.read().strip()
-
-        if not result:
+        # Wait for the tmux popup to complete
+        tmux_process.wait()
+        logging.debug(f"RETURN {tmux_process.returncode}")
+        # Handle errors or user cancellation
+        if tmux_process.returncode == 0:
+            return stdout
+        elif tmux_process.returncode == 130:
             raise FzfUserInterrupt("User canceled selection.")
-
-        return result
+        else:
+            raise FzfError(f"fzf failed with exit code {tmux_process.returncode}: {stderr}")
 
     finally:
-        # Clean up the temporary file
-        if os.path.exists(output_path):
-            os.unlink(output_path)
-
+        # Clean up the named pipes
+        for pipe in [stdout_pipe, stderr_pipe]:
+            if os.path.exists(pipe):
+                os.unlink(pipe)
