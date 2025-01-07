@@ -161,7 +161,7 @@ Comment out the options you find useful and replace the placeholders with approp
    set-option -g @fzf-links-editor-open-cmd '/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl'
    ```
 
-2. **`fzf-links-browser-open-cmd`**: This option specifies the command for opening the browser. User `%url` as the placeholder for the url to be opened.
+2. **`@fzf-links-browser-open-cmd`**: This option specifies the command for opening the browser. User `%url` as the placeholder for the url to be opened.
 
 3. **`@fzf-links-fzf-display-options`**: This option specifies the arguments passed to `fzf-tmux` and, subsequently, to `fzf`. Refer to the respective man pages of [`fzf-tmux`](https://github.com/junegunn/fzf#fzf-tmux) and [`fzf`](https://github.com/junegunn/fzf#options) for detailed documentation of the available arguments.
 
@@ -182,7 +182,7 @@ Comment out the options you find useful and replace the placeholders with approp
    set-option -g @fzf-links-fzf-display-options '-w 100% --maxnum-displayed 10 --multi -0 --no-preview'
    ```
 
-4. **`history-lines`**: An integer number determining how many extra lines of history to consider. By default, it is set to 0.
+4. **`@fzf-links-history-lines`**: An integer number determining how many extra lines of history to consider. By default, it is set to 0.
 
 5. **`@fzf-links-ls-colors-filename`**: A file containing the content of $LS_COLORS. For example, you can save $LS_COLORS to a cached file using:
 	 ```bash
@@ -193,7 +193,7 @@ Comment out the options you find useful and replace the placeholders with approp
 
 6. **`@fzf-links-path-extension`**: This option is also not strictly necessary. It is only required if `fzf-tmux` or `tmux` binaries are not in the `$PATH` that was available when `tmux` started. The plugin only requires these two processes.
 
-7. **`fzf-links-python`** and **`fzf-links-python-path`**: These two options allow specifying the path to the Python interpreter and, if needed, to a Python `site-packages` directory, which is appended to `$PYTHONPATH`. The plugin does not rely on any external dependencies. However, you may want to import external modules installed in `site-packages` to extend the functionality of the plugin in `user_schemes`.
+7. **`@fzf-links-python`** and **`@fzf-links-python-path`**: These two options allow specifying the path to the Python interpreter and, if needed, to a Python `site-packages` directory, which is appended to `$PYTHONPATH`. The plugin does not rely on any external dependencies. However, you may want to import external modules installed in `site-packages` to extend the functionality of the plugin in `user_schemes`.
 
 8. 🔍 **Logging**: Control logging levels via these options:
 
