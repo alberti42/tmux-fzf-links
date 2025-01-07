@@ -163,7 +163,7 @@ Comment out the options you find useful and replace the placeholders with approp
 
 2. **`@fzf-links-browser-open-cmd`**: This option specifies the command for opening the browser. User `%url` as the placeholder for the url to be opened.
 
-3. **`@fzf-links-fzf-display-options`**: This option specifies the arguments passed to `fzf-tmux` and, subsequently, to `fzf`. Refer to the respective man pages of [`fzf-tmux`](https://github.com/junegunn/fzf#fzf-tmux) and [`fzf`](https://github.com/junegunn/fzf#options) for detailed documentation of the available arguments.
+3. **`@fzf-links-fzf-display-options`**: This option specifies the arguments passed to `fzf`. Refer to the man page of [`fzf`](https://github.com/junegunn/fzf#options) for detailed documentation of the available arguments. In addition to the fzf arguments, this option can contain additional argument, which are specific to this plugin and documented below:
 
 	- **`-h`**: A custom option added by this plugin to set the height in number of lines of the tmux popup. The argument can be a positive integer or a percentage of tmux pane height. For example: `-h 30` means that a panel hosting up to 30 matches will be shown. The extra lines consumed by the border are not accounted for by this option.
 
