@@ -11,14 +11,9 @@ from .errors_types import NotSupportedPlatform, FailedResolvePath
 # >>> GIT SCHEME >>>
 
 def git_post_handler(match:re.Match[str]) -> dict[str,str]:
-    server = match.group("server")
-    if not isinstance(server,str):
-        raise ValueError(f"github repository of type {type(server)} but expect of type <class 'str'>")
-
-    repo = match.group("repo")
-    if not isinstance(repo,str):
-        raise ValueError(f"github repository of type {type(repo)} but expect of type <class 'str'>")
-
+    server:str = match.group("server")
+    repo:str = match.group("repo")
+    
     return {'url': f"https://{server}/{repo}"}
 
 git_scheme:SchemeEntry = {
