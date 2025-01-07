@@ -4,7 +4,7 @@
 
 The default schemes include recognition of:
 
-- local files with relative and absolute paths (e.g. `~/.zshrc:123` where the optional 123 stands for the line number)
+- local files with relative and absolute paths (e.g. `~/.zshrc:123` where the optional `:123` specifies the line number)
 - Python code error where it recognizes the line at which the error was generated
 - web addresses (e.g. `https://...`)
 - IP addresses (`192.168.1.42:8000`)
