@@ -4,10 +4,10 @@
 
 The default schemes include recognition of:
 
-- local files with relative and absolute paths (192.168.1.42:8000)
+- local files with relative and absolute paths (e.g. `~/.zshrc:123` where the optional 123 stands for the line number)
 - Python code error where it recognizes the line at which the error was generated
-- web addresses (e.g. https://...)
-- IP addresses (192.168.1.42:8000)
+- web addresses (e.g. `https://...`)
+- IP addresses (`192.168.1.42:8000`)
 - git addresses (e.g., `git@github.com:alberti42/tmux-fzf-links.git`)
 
 The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmux-fzf-url).
