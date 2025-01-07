@@ -74,7 +74,6 @@ def open_link(editor_open_cmd:str, browser_open_cmd:str, post_handled_match:Post
 
         args = shlex.split(cmd)
 
-    logging.debug(os.environ["PATH"])
     try:
         # Run the command and capture stdout and stderr
         proc = subprocess.Popen(

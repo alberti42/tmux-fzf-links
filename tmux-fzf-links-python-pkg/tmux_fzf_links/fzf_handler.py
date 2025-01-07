@@ -5,7 +5,6 @@
 import shlex
 from .errors_types import FailedTmuxPaneSize, FzfError, FzfUserInterrupt
 import subprocess
-import logging
 import tempfile
 import os
 
@@ -131,17 +130,12 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
     fzf_args = ['--no-sort']
     if use_ls_colors:
         fzf_args.append('--ansi')
-
-    logging.debug(f"fzf_args: {fzf_args}")
-    logging.debug(f"tmux_popup_command: {tmux_popup_command}")
-    logging.debug(f"cmd_user_args: {cmd_user_args}")
-
+    
     # Combine fzf arguments, giving user options higher priority
     cmd_args = fzf_args + cmd_user_args
 
     # Create a temporary directory for the named pipes
     with tempfile.TemporaryDirectory() as tmpdir:
-        logging.debug(f"TMP {tmpdir}")
         # Paths for the named pipes
         stdout_pipe = os.path.join(tmpdir, 'fzf_stdout')
         stderr_pipe = os.path.join(tmpdir, 'fzf_stderr')
@@ -156,7 +150,7 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
         
         # Prepare the fzf command to run inside the tmux popup
         fzf_command = (
-            f"echo -e \"{chr(10).join(choices)}\" | "
+            f"echo \"{chr(10).join(choices)}\" | "
             f"fzf {' '.join(shlex.quote(arg) for arg in cmd_args)} "
             f"> {shlex.quote(stdout_pipe)} 2> {shlex.quote(stderr_pipe)}"
         )
