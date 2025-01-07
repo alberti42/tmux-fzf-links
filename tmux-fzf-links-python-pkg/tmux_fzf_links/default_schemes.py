@@ -104,22 +104,22 @@ url_scheme:SchemeEntry = {
 
 def file_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
     # Get the matched file path
-    file_path_str = match.group("link1") or match.group("link2")
+    file_path:str = match.group("link1") or match.group("link2")
 
     # Drop matches containing only `.` such as current and previous folder
-    if all(char == '.' for char in file_path_str):
+    if all(char == '.' for char in file_path):
         return None
 
     # Return the fully resolved path
-    resolved_path = heuristic_find_file(file_path_str)
+    resolved_path = heuristic_find_file(file_path)
     
     if resolved_path:
         tag="dir" if resolved_path.is_dir() else "file"
         if colors.enabled:
             color_code=colors.get_file_color(resolved_path)
-            display_text = f"\033[{color_code}m{str(resolved_path)}\033[0m"
+            display_text = f"\033[{color_code}m{match.group(0)}\033[0m"
         else:
-            display_text = f"{str(resolved_path)}"
+            display_text = f"{str(match.group(0))}"
         return { 
             "display_text":display_text,
             "tag": tag
@@ -130,11 +130,14 @@ def file_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
 def file_post_handler(match:re.Match[str]) -> list[str]:
 
     # Get the matched file path
-    file_path_str = match.group("link1") or match.group("link2")
+    file_path:str = match.group("link1") or match.group("link2")
+    line:str|None = match.group("line")
+    if line is None:
+        line = "1"
 
-    resolved_path = heuristic_find_file(file_path_str)
+    resolved_path = heuristic_find_file(file_path)
     if resolved_path is None:
-        raise FailedResolvePath(f"could not resolve the path of: {file_path_str}")
+        raise FailedResolvePath(f"could not resolve the path of: {file_path}")
 
     resolved_path_str = str(resolved_path.resolve())
 
@@ -156,7 +159,7 @@ def file_post_handler(match:re.Match[str]) -> list[str]:
         else:
             raise NotSupportedPlatform(f"platform {sys.platform} not supported")
     else:
-        args = shlex.split(configs.editor_open_cmd.replace(f"%file",resolved_path_str).replace(f"%line","1"))
+        args = shlex.split(configs.editor_open_cmd.replace(f"%file",resolved_path_str).replace(f"%line",line))
         return args
 
 file_scheme:SchemeEntry = {
@@ -164,7 +167,7 @@ file_scheme:SchemeEntry = {
         "opener": OpenerType.CUSTOM,
         "post_handler": file_post_handler,
         "pre_handler": file_pre_handler,
-        "regex": re.compile(r"(\'(?P<link1>\~?[a-zA-Z0-9_\/\-\:\. ]+)\'|(?P<link2>\~?[a-zA-Z0-9_\/\-\:\.]+))")
+        "regex": re.compile(r"(\'(?P<link1>\~?[a-zA-Z0-9_\/\-\. ]+)\'|(?P<link2>\~?[a-zA-Z0-9_\/\-\.]+))(\:(?P<line>\d+))?")
     }
 
 # <<< FILE SCHEME <<<
