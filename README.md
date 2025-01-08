@@ -4,11 +4,11 @@
 
 The default schemes include recognition of:
 
-- local files with relative and absolute paths (192.168.1.42:8000)
+- local files with relative and absolute paths (e.g. `~/.zshrc:123` where the optional `:123` specifies the line number)
 - Python code error where it recognizes the line at which the error was generated
-- web addresses (e.g. https://...)
-- IP addresses (192.168.1.42:8000)
-- git addresses (e.g., `git@github.com:alberti42/dotfiles.git`)
+- web addresses (e.g. `https://...`)
+- git addresses (e.g., `git@github.com:alberti42/tmux-fzf-links.git`)
+- IPv4 addresses (`192.168.1.42:8000`)
 
 The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmux-fzf-url).
 
@@ -161,9 +161,9 @@ Comment out the options you find useful and replace the placeholders with approp
    set-option -g @fzf-links-editor-open-cmd '/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl'
    ```
 
-2. **`fzf-links-browser-open-cmd`**: This option specifies the command for opening the browser. User `%url` as the placeholder for the url to be opened.
+2. **`@fzf-links-browser-open-cmd`**: This option specifies the command for opening the browser. User `%url` as the placeholder for the url to be opened.
 
-3. **`@fzf-links-fzf-display-options`**: This option specifies the arguments passed to `fzf-tmux` and, subsequently, to `fzf`. Refer to the respective man pages of [`fzf-tmux`](https://github.com/junegunn/fzf#fzf-tmux) and [`fzf`](https://github.com/junegunn/fzf#options) for detailed documentation of the available arguments.
+3. **`@fzf-links-fzf-display-options`**: This option specifies the arguments passed to `fzf`. Refer to the man page of [`fzf`](https://github.com/junegunn/fzf#options) for detailed documentation of the available arguments. In addition to the fzf arguments, this option can contain additional argument, which are specific to this plugin and documented below:
 
 	- **`-h`**: A custom option added by this plugin to set the height in number of lines of the tmux popup. The argument can be a positive integer or a percentage of tmux pane height. For example: `-h 30` means that a panel hosting up to 30 matches will be shown. The extra lines consumed by the border are not accounted for by this option.
 
@@ -182,7 +182,7 @@ Comment out the options you find useful and replace the placeholders with approp
    set-option -g @fzf-links-fzf-display-options '-w 100% --maxnum-displayed 10 --multi --no-preview'
    ```
 
-4. **`history-lines`**: An integer number determining how many extra lines of history to consider. By default, it is set to 0.
+4. **`@fzf-links-history-lines`**: An integer number determining how many extra lines of history to consider. By default, it is set to 0.
 
 5. **`@fzf-links-ls-colors-filename`**: A file containing the content of $LS_COLORS. For example, you can save $LS_COLORS to a cached file using:
 	 ```bash
@@ -193,7 +193,7 @@ Comment out the options you find useful and replace the placeholders with approp
 
 6. **`@fzf-links-path-extension`**: This option is also not strictly necessary. It is only required if `fzf-tmux` or `tmux` binaries are not in the `$PATH` that was available when `tmux` started. The plugin only requires these two processes.
 
-7. **`fzf-links-python`** and **`fzf-links-python-path`**: These two options allow specifying the path to the Python interpreter and, if needed, to a Python `site-packages` directory, which is appended to `$PYTHONPATH`. The plugin does not rely on any external dependencies. However, you may want to import external modules installed in `site-packages` to extend the functionality of the plugin in `user_schemes`.
+7. **`@fzf-links-python`** and **`@fzf-links-python-path`**: These two options allow specifying the path to the Python interpreter and, if needed, to a Python `site-packages` directory, which is appended to `$PYTHONPATH`. The plugin does not rely on any external dependencies. However, you may want to import external modules installed in `site-packages` to extend the functionality of the plugin in `user_schemes`.
 
 8. 🔍 **Logging**: Control logging levels via these options:
 
