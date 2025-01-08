@@ -3,7 +3,6 @@
 #===============================================================================
 
 import shutil
-import logging
 import re
 import os
 import subprocess
@@ -34,7 +33,7 @@ class SchemeEntry(TypedDict):
     post_handler: Callable[[re.Match[str]], PostHandledMatch] | None  # A function that takes a string and returns a string
     regex: re.Pattern[str]            # A compiled regex pattern
 
-def open_link(editor_open_cmd:str, browser_open_cmd:str, post_handled_match:PostHandledMatch, opener:OpenerType):
+def open_link(post_handled_match:PostHandledMatch, editor_open_cmd:str, browser_open_cmd:str, opener:OpenerType):
     """Open a link using the appropriate handler."""
 
     # contains the arguments for subprocess.Popen, including the process to start
