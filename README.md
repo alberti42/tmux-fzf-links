@@ -131,7 +131,7 @@ Default options are already provided. However, you can customize all options by 
 # set-option -g @fzf-links-history-lines "0"
 set-option -g @fzf-links-editor-open-cmd "tmux new-window -n 'emacs' /usr/local/bin/emacs +%line '%file'"
 set-option -g @fzf-links-browser-open-cmd "/path/to/browser '%url'"
-set-option -g @fzf-links-fzf-display-options "-w 100% --maxnum-displayed 20 --multi -0 --no-preview"
+set-option -g @fzf-links-fzf-display-options "-w 100% --maxnum-displayed 20 --multi --track --no-preview"
 # set-option -g @fzf-links-path-extension "/usr/local/bin"
 # set-option -g @fzf-links-loglevel-tmux "WARNING"
 # set-option -g @fzf-links-loglevel-file "DEBUG"
@@ -179,7 +179,7 @@ Comment out the options you find useful and replace the placeholders with approp
 
    Example:  
    ```tmux
-   set-option -g @fzf-links-fzf-display-options '-w 100% --maxnum-displayed 10 --multi -0 --no-preview'
+   set-option -g @fzf-links-fzf-display-options '-w 100% --maxnum-displayed 10 --multi --no-preview'
    ```
 
 4. **`history-lines`**: An integer number determining how many extra lines of history to consider. By default, it is set to 0.
