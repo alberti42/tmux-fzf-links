@@ -12,7 +12,7 @@ import logging
 import importlib.util
 import pathlib
 
-from tmux_fzf_links.fzf_handler import run_fzf
+from tmux_fzf_links.fzf_handler import FzfReturnType, run_fzf
 from .colors import colors
 from .configs import configs
 from typing import override
@@ -337,31 +337,39 @@ def run(
     # Run fzf and get selected items
     try:
         # Run fzf and get selected items
-        result = run_fzf(fzf_display_options,numbered_choices,colors.enabled)
+        fzf_result:FzfReturnType = run_fzf(fzf_display_options,numbered_choices,colors.enabled)
     except FzfError as e:
         logger.error(f"error: unexpected error: {e}")
         sys.exit(1)
     except FzfUserInterrupt as e:
         sys.exit(0)    
 
-    # Process selected items
-    selected_choices = result.splitlines()
+    if fzf_result["pressed_key"] == "META-ENTER":
+        # When meta is pressed, the selection is copied to the clipboard
+        is_meta_pressed = True
+        # We disable colors
+        colors.enable_colors(False)
+    else:
+        is_meta_pressed = False
 
     # Regular expression to parse the selected item from the fzf options
     # Each line is in the format {four-digit number, two spaces <scheme type>, two spaces, <link>
     selected_item_pattern = r"\s*(?P<idx>\d+)\s*-\s*\[(?P<type>.+?)\]\s*-\s*(?P<link>.+)"
 
+    # Array of strings to be copied to clipboard
+    clipboard:list[str] = []
+
     # Process selected items
-    for selected_choice in selected_choices:
-        match = re.match(selected_item_pattern, selected_choice)
-        if match:
-            idx_str:str = match.group("idx")
-            scheme_type:str = match.group("type")
+    for selected_choice in fzf_result["selection"]:
+        fzf_match = re.match(selected_item_pattern, selected_choice)
+        if fzf_match:
+            idx_str:str = fzf_match.group("idx")
+            scheme_type:str = fzf_match.group("type")
             
             try:
                 idx:int=int(idx_str,10)
                 # pick the original item to be searched again
-                # before passing the `match` object to the post handler
+                # before passing the `fzf_match` object to the post handler
                 selected_item=sorted_choices[idx-1][1]
             except:
                 logger.error(f"error: malformed selection: {selected_choice}")
@@ -375,17 +383,39 @@ def run(
 
             scheme=schemes[index_scheme]
 
-            match=scheme["regex"].search(selected_item)
-            if match is None:
+            # We did not store the state of all matches. It is faster/more convenient
+            # to simply run once more the match for the selected options. The overhead
+            # is negligible and we avoid saving in memory all matches for all displayed
+            # options.
+            rematch=scheme["regex"].search(selected_item)
+            if rematch is None:
                 logger.error(f"error: pattern did not match unexpectedly")
-                continue          
+                continue
+
+            if is_meta_pressed:
+                # If META (i.e. alt / option key) is pressed, then we copy to clipboard
+                # the result of the pre handler.
+                if scheme['pre_handler']:
+                    pre_handled_match = scheme['pre_handler'](rematch)
+                else:
+                    # fallback case when no pre_handler is provided for the scheme
+                    pre_handled_match = {
+                        "display_text": entire_match,
+                        "tag": scheme["tags"][0]
+                    }
+
+                if pre_handled_match:
+                    clipboard.append(pre_handled_match["display_text"])
+                
+                # Skip the rest
+                continue
       
             # Get the post_handler, which applies after the user selection
             post_handler = scheme.get("post_handler",None)
 
-            # Process the match with the post handler
+            # Process the rematch with the post handler
             if post_handler:
-                post_handled_link = post_handler(match)    
+                post_handled_link = post_handler(rematch)    
             else:
                 if scheme["opener"] == OpenerType.EDITOR:
                     post_handled_link = {'file':match.group(0)}
@@ -394,7 +424,7 @@ def run(
                 else:
                     raise MissingPostHandler(f"scheme with tags {scheme["tags"]} configured as custom opener but missing post handler")
             try:
-                open_link(editor_open_cmd,browser_open_cmd,post_handled_link, schemes[index_scheme]["opener"])
+                open_link(post_handled_link,editor_open_cmd,browser_open_cmd,schemes[index_scheme]["opener"])
             except (NoSuitableAppFound, PatternNotMatching, CommandFailed) as e:
                 logger.error(f"error: {e}")
                 continue
@@ -404,6 +434,21 @@ def run(
         else:
             logger.error(f"error: malformed selection: {selected_choice}")
             continue
+
+    if clipboard != []:
+        sss:str = "s" if len(clipboard)>1 else ""
+        tmux_buffer_action:list[str] = [
+                'tmux', 'set-buffer', '-w', f'{"\n".join(clipboard)}', ';',
+                'display-message', f"copied selection{sss} to tmux buffer"
+            ]
+        try:
+            open_link(tmux_buffer_action,editor_open_cmd,browser_open_cmd,OpenerType.CUSTOM)
+        except (NoSuitableAppFound, PatternNotMatching, CommandFailed) as e:
+            logger.error(f"error: {e}")
+            return
+        except Exception as e:
+            logger.error(f"error: unexpected error: {e}")
+            return
 
 if __name__ == "__main__":
     try:

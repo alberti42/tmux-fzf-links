@@ -3,10 +3,17 @@
 #===============================================================================
 
 import shlex
-from .errors_types import FailedTmuxPaneSize, FzfError, FzfUserInterrupt
 import subprocess
 import tempfile
 import os
+import sys
+from typing import TypedDict
+
+from .errors_types import FailedTmuxPaneSize, FzfError, FzfUserInterrupt
+
+class FzfReturnType(TypedDict):
+    selection:list[str]
+    pressed_key:str
 
 def extract_option(cmd_user_args:list[str],option:str) -> str | None:
     # extract the user option
@@ -40,7 +47,7 @@ def parse_int_option(option_arg:str|None,ref_value:int|None) -> int|None:
     return int_value
 
 
-def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -> str:
+def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -> FzfReturnType:
     """Run fzf within a tmux popup with the given options and handle output via mkfifo."""
 
     # Parse user options into a list
@@ -127,9 +134,22 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
     tmux_popup_command.extend(["-h", f"{fzf_height}"])
 
     # Base fzf arguments
-    fzf_args = ['--no-sort']
+    fzf_args = ['--no-sort','--bind','alt-enter:print(META-ENTER)+accept',  '--bind', 'enter:print(ENTER)+accept']
     if use_ls_colors:
         fzf_args.append('--ansi')
+    
+    with_header = False
+    if with_header:
+        if sys.platform == "darwin":            
+            meta_key = "⌥" # option key
+        elif sys.platform == "win32":
+            meta_key = "alt" # symbol: ⎇
+        else:
+            # historically the alt key was called meta in unix/linux systems
+            meta_key = "meta"  # symbol: ◆ 
+
+        fzf_args.extend(['--header',f"Press {meta_key}+↵ to copy selection to tmux buffer"])
+
     
     # Combine fzf arguments, giving user options higher priority
     cmd_args = fzf_args + cmd_user_args
@@ -172,7 +192,14 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
 
             # Handle errors or user cancellation
             if tmux_process.returncode == 0:
-                return stdout
+
+                # Split the lines from fzf
+                results = stdout.splitlines()
+
+                # The first line is special and tells us what key was pressed by the user
+                pressed_key = results[0]
+
+                return {"pressed_key":pressed_key, "selection":results[1:]}
             elif tmux_process.returncode == 130:
                 raise FzfUserInterrupt("User canceled selection.")
             else:
