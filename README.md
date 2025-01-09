@@ -36,6 +36,13 @@ The plugin's Python-based architecture enables advanced users to:
 
 ---
 
+## 🛠️ Requirements
+
+This plugin is designed to have minimum requirements, only tmux and python3. It does not require special python modules to be installed. It has been tested on tmux 3.4 and python 3.13.
+It should be possible to ensure backward compatibility with minimum changes, but has to be tested. Please open an [issue](https://github.com/alberti42/tmux-fzf-links/issues) if you encounter issues of back compatibility.
+
+---
+
 ## 🎥 Screencast
 
 Watch the plugin in action to see how it enhances your tmux workflow!
