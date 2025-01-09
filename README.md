@@ -16,22 +16,27 @@ The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmu
 
 ## 🌟 Features
 
-- **Fuzzy Search Links**: Quickly locate and open links appearing in your terminal output. Support multiple simultaneous choices.
+- **Fuzzy Search Links**: Quickly locate and open links appearing in your terminal output. Support multiple simultaneous choices when pressing `TAB`.
 - **Default and Custom Schemes**: Use pre-configured schemes or define your own with custom handlers for pre- and post-processing.
 - **Integration with tmux Popup Windows**: Provides a seamless user experience within tmux sessions.
 - **Flexible Open Commands**: Configure your favorite editor, browser, or custom command to open links.
 - **Dynamic Logging**: Output logs to tmux messages and/or a file, with adjustable verbosity.
 - **Colorized Links**: Enhance readability with colorized links, using `$LS_COLORS` for files and directories.
+- **Facebook-Picker-like Behavior**: By pressing META-ENTER, instead of executing the configured actions, the selected items are copied to tmux buffer and your system's clipboard.
 
----
-
-## 🧩 Extensibility
+### 🧩 Extensibility
 
 The plugin's Python-based architecture enables advanced users to:
 
 1. Define intricate regular expressions.
 2. Implement pre- and post-processing functions for custom behaviors.
 3. Extend functionality without modifying the core code.
+
+
+### 🛠️ Requirements
+
+This plugin is designed to have minimum requirements, only tmux and python3. It does not require special python modules to be installed. It has been tested on tmux 3.4 and python 3.13.
+It should be possible to ensure backward compatibility with minimum changes, but has to be tested. Please open an [issue](https://github.com/alberti42/tmux-fzf-links/issues) if you encounter issues of back compatibility.
 
 ---
 
@@ -120,6 +125,7 @@ run-shell "$ZINIT_HOME/plugins/alberti42---tmux-fzf-links/fzf-links.tmux"
 
 replacing `$ZINIT_HOME` with the actual value of your zinit home directory.
 
+---
 
 ## ⚙️ Configuration
 
@@ -225,7 +231,7 @@ Adjust the colors as you like them. Also, if you use customization themes, make 
 
 ---
 
-## 🛠️ Defining Schemes
+## 🛠️ Defining Schemes for Power Users
 
 ### Default Schemes
 

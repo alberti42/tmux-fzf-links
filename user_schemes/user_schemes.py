@@ -16,7 +16,7 @@ def ip_pre_handler(match:re.Match[str]) -> PreHandledMatch | None:
 def ip_post_handler(match:re.Match[str]) -> list[str]:
     # For demonstration purpose, we copy the selected IP address to tmux buffer and display a notification message
     ip_addr = match.group("ip")
-    return ['tmux', 'set-buffer', f'{ip_addr}', ';', 'display-message', f"IPv4 address '{ip_addr}' copied to tmux buffer"]
+    return ['tmux', 'set-buffer', '-w', f'{ip_addr}', ';', 'display-message', f"IPv4 address '{ip_addr}' copied to tmux buffer"]
 
 ip_scheme:SchemeEntry = {   
         "tags": ("IPv4",),

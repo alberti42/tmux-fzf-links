@@ -6,6 +6,7 @@ import shlex
 import subprocess
 import tempfile
 import os
+import sys
 from typing import TypedDict
 
 from .errors_types import FailedTmuxPaneSize, FzfError, FzfUserInterrupt
@@ -136,6 +137,19 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
     fzf_args = ['--no-sort','--bind','alt-enter:print(META-ENTER)+accept',  '--bind', 'enter:print(ENTER)+accept']
     if use_ls_colors:
         fzf_args.append('--ansi')
+    
+    with_header = False
+    if with_header:
+        if sys.platform == "darwin":            
+            meta_key = "⌥" # option key
+        elif sys.platform == "win32":
+            meta_key = "alt" # symbol: ⎇
+        else:
+            # historically the alt key was called meta in unix/linux systems
+            meta_key = "meta"  # symbol: ◆ 
+
+        fzf_args.extend(['--header',f"Press {meta_key}+↵ to copy selection to tmux buffer"])
+
     
     # Combine fzf arguments, giving user options higher priority
     cmd_args = fzf_args + cmd_user_args

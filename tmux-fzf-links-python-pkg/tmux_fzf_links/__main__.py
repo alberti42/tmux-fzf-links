@@ -345,7 +345,10 @@ def run(
         sys.exit(0)    
 
     if fzf_result["pressed_key"] == "META-ENTER":
+        # When meta is pressed, the selection is copied to the clipboard
         is_meta_pressed = True
+        # We disable colors
+        colors.enable_colors(False)
     else:
         is_meta_pressed = False
 
@@ -434,7 +437,10 @@ def run(
 
     if clipboard != []:
         sss:str = "s" if len(clipboard)>1 else ""
-        tmux_buffer_action:list[str] = ['tmux', 'set-buffer', f'{"\n".join(clipboard)}', ';', 'display-message', f"copied selection{sss} to tmux buffer"]
+        tmux_buffer_action:list[str] = [
+                'tmux', 'set-buffer', '-w', f'{"\n".join(clipboard)}', ';',
+                'display-message', f"copied selection{sss} to tmux buffer"
+            ]
         try:
             open_link(tmux_buffer_action,editor_open_cmd,browser_open_cmd,OpenerType.CUSTOM)
         except (NoSuitableAppFound, PatternNotMatching, CommandFailed) as e:
