@@ -18,7 +18,7 @@
             "LSP-basedpyright": {
                 "settings": {
                     "venv": "",
-                    "venvPath": "/Users/andrea/.pyenv/versions/3.13.0/envs/py313",
+                    "venvPath": "~/.pyenv/versions/3.13.0/envs/py313",
                     "python.pythonPath": "~/.pyenv/versions/py313/bin/python",
                     "basedpyright.analysis.extraPaths": [
                         "~/.local/share/zinit/plugins/tmux-plugins---tmux-fzf-links/tmux-fzf-links-python-pkg"
