@@ -16,12 +16,13 @@ The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmu
 
 ## 🌟 Features
 
-- **Fuzzy Search Links**: Quickly locate and open links appearing in your terminal output. Support multiple simultaneous choices.
+- **Fuzzy Search Links**: Quickly locate and open links appearing in your terminal output. Support multiple simultaneous choices when pressing `TAB`.
 - **Default and Custom Schemes**: Use pre-configured schemes or define your own with custom handlers for pre- and post-processing.
 - **Integration with tmux Popup Windows**: Provides a seamless user experience within tmux sessions.
 - **Flexible Open Commands**: Configure your favorite editor, browser, or custom command to open links.
 - **Dynamic Logging**: Output logs to tmux messages and/or a file, with adjustable verbosity.
 - **Colorized Links**: Enhance readability with colorized links, using `$LS_COLORS` for files and directories.
+- **Facebook-Picker-like Behavior**: By pressing META-ENTER, instead of executing the configured actions, the selected items are copied to tmux buffer and your system's clipboard.
 
 ---
 
@@ -225,7 +226,7 @@ Adjust the colors as you like them. Also, if you use customization themes, make 
 
 ---
 
-## 🛠️ Defining Schemes
+## 🛠️ Defining Schemes for Power Users
 
 ### Default Schemes
 
