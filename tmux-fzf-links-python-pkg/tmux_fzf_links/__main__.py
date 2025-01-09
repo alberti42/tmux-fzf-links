@@ -15,9 +15,10 @@ import pathlib
 from tmux_fzf_links.fzf_handler import FzfReturnType, run_fzf
 from .colors import colors
 from .configs import configs
-try:
+
+if sys.version_info >= (3, 12):  # For Python 3.12 and newer
     from typing import override
-except ImportError:
+elif sys.version_info < (3, 12):  # For Python 3.8 and older
     # Fallback for Python < 3.12
     def override(method):
         return method
@@ -423,9 +424,9 @@ def run(
                 post_handled_link = post_handler(rematch)    
             else:
                 if scheme["opener"] == OpenerType.EDITOR:
-                    post_handled_link = {'file':match.group(0)}
+                    post_handled_link = {'file':rematch.group(0)}
                 elif scheme["opener"] == OpenerType.BROWSER:
-                    post_handled_link = {'url':match.group(0)}
+                    post_handled_link = {'url':rematch.group(0)}
                 else:
                     raise MissingPostHandler(f"scheme with tags {scheme['tags']} configured as custom opener but missing post handler")
             try:
