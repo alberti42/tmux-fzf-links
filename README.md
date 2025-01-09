@@ -45,8 +45,6 @@ Watch the plugin in action to see how it enhances your tmux workflow!
 
 <a href="https://asciinema.org/a/697089" target="_blank"><img src="https://asciinema.org/a/697089.svg" /></a>
 
----
-
 ## 📦 Installation
 
 ### Using TPM (Tmux Plugin Manager)
@@ -217,7 +215,6 @@ set-option -g popup-border-style "bg=#24273a,fg=#00bbff"
 
 Adjust the colors as you like them. Also, if you use customization themes, make sure to add these commands after the customization theme in your tmux, or else these settings will likely be overwritten by your theme.
 
----
 
 ## 🖱️ Usage
 
@@ -227,7 +224,6 @@ Adjust the colors as you like them. Also, if you use customization themes, make 
 4. Press `TAB` or `SHIFT-TAB` to select or deselect multiple choices
 4. The selected links will be opened using the configured command (editor, browser, or custom).
 
----
 
 ## 🛠️ Defining Schemes for Power Users
 
@@ -434,13 +430,10 @@ rm_default_schemes: list[str] = ["file", "dir"]
 
 When you add a tag to `rm_default_schemes`, all schemes associated with that tag will be disabled. If a scheme has multiple tags, specifying any one of them will disable the entire scheme. **It is not possible to disable just one tag from a multi-tag scheme while keeping other tags active.**
 
----
 
 ## 🤝 Contributing
 
 Contributions are welcome! Please fork this repository and submit a pull request for enhancements or bug fixes, or simply report any issues in the [GitHub repository](https://github.com/alberti42/tmux-fzf-links/issues).
-
----
 
 ## ❤️ Donations
 
@@ -448,7 +441,6 @@ I would be grateful for any donation to support the development of this plugin.
 
 [<img src="images/buy_me_coffee.png" width=300 alt="Buy Me a Coffee QR Code"/>](https://buymeacoffee.com/alberti)
 
----
 
 ## 👨‍💻 Author
 
@@ -456,7 +448,6 @@ I would be grateful for any donation to support the development of this plugin.
 - **GitHub Profile:** [alberti42](https://github.com/alberti42)
 - **Donations:** [![Buy Me a Coffee](https://img.shields.io/badge/Donate-Buy%20Me%20a%20Coffee-orange)](https://buymeacoffee.com/alberti)
 
----
 
 ## 📜 License
 
