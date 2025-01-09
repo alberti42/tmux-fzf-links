@@ -12,6 +12,7 @@ The default schemes include recognition of:
 
 The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmux-fzf-url).
 
+---
 
 ## 🌟 Features
 
@@ -23,8 +24,7 @@ The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmu
 - **Colorized Links**: Enhance readability with colorized links, using `$LS_COLORS` for files and directories.
 - **Facebook-Picker-like Behavior**: By pressing META-ENTER, instead of executing the configured actions, the selected items are copied to tmux buffer and your system's clipboard.
 
-
-## 🧩 Extensibility
+### 🧩 Extensibility
 
 The plugin's Python-based architecture enables advanced users to:
 
@@ -33,17 +33,20 @@ The plugin's Python-based architecture enables advanced users to:
 3. Extend functionality without modifying the core code.
 
 
-## 🛠️ Requirements
+### 🛠️ Requirements
 
 This plugin is designed to have minimum requirements, only tmux and python3. It does not require special python modules to be installed. It has been tested on tmux 3.4 and python 3.13.
 It should be possible to ensure backward compatibility with minimum changes, but has to be tested. Please open an [issue](https://github.com/alberti42/tmux-fzf-links/issues) if you encounter issues of back compatibility.
 
+---
 
 ## 🎥 Screencast
 
 Watch the plugin in action to see how it enhances your tmux workflow!
 
 <a href="https://asciinema.org/a/697089" target="_blank"><img src="https://asciinema.org/a/697089.svg" /></a>
+
+---
 
 ## 📦 Installation
 
@@ -122,6 +125,7 @@ run-shell "$ZINIT_HOME/plugins/alberti42---tmux-fzf-links/fzf-links.tmux"
 
 replacing `$ZINIT_HOME` with the actual value of your zinit home directory.
 
+---
 
 ## ⚙️ Configuration
 
@@ -215,6 +219,7 @@ set-option -g popup-border-style "bg=#24273a,fg=#00bbff"
 
 Adjust the colors as you like them. Also, if you use customization themes, make sure to add these commands after the customization theme in your tmux, or else these settings will likely be overwritten by your theme.
 
+---
 
 ## 🖱️ Usage
 
@@ -224,6 +229,7 @@ Adjust the colors as you like them. Also, if you use customization themes, make 
 4. Press `TAB` or `SHIFT-TAB` to select or deselect multiple choices
 4. The selected links will be opened using the configured command (editor, browser, or custom).
 
+---
 
 ## 🛠️ Defining Schemes for Power Users
 
@@ -430,10 +436,13 @@ rm_default_schemes: list[str] = ["file", "dir"]
 
 When you add a tag to `rm_default_schemes`, all schemes associated with that tag will be disabled. If a scheme has multiple tags, specifying any one of them will disable the entire scheme. **It is not possible to disable just one tag from a multi-tag scheme while keeping other tags active.**
 
+---
 
 ## 🤝 Contributing
 
 Contributions are welcome! Please fork this repository and submit a pull request for enhancements or bug fixes, or simply report any issues in the [GitHub repository](https://github.com/alberti42/tmux-fzf-links/issues).
+
+---
 
 ## ❤️ Donations
 
@@ -441,6 +450,7 @@ I would be grateful for any donation to support the development of this plugin.
 
 [<img src="images/buy_me_coffee.png" width=300 alt="Buy Me a Coffee QR Code"/>](https://buymeacoffee.com/alberti)
 
+---
 
 ## 👨‍💻 Author
 
@@ -448,6 +458,7 @@ I would be grateful for any donation to support the development of this plugin.
 - **GitHub Profile:** [alberti42](https://github.com/alberti42)
 - **Donations:** [![Buy Me a Coffee](https://img.shields.io/badge/Donate-Buy%20Me%20a%20Coffee-orange)](https://buymeacoffee.com/alberti)
 
+---
 
 ## 📜 License
 
