@@ -12,7 +12,6 @@ The default schemes include recognition of:
 
 The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmux-fzf-url).
 
----
 
 ## 🌟 Features
 
@@ -24,7 +23,6 @@ The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmu
 - **Colorized Links**: Enhance readability with colorized links, using `$LS_COLORS` for files and directories.
 - **Facebook-Picker-like Behavior**: By pressing META-ENTER, instead of executing the configured actions, the selected items are copied to tmux buffer and your system's clipboard.
 
----
 
 ## 🧩 Extensibility
 
@@ -34,14 +32,12 @@ The plugin's Python-based architecture enables advanced users to:
 2. Implement pre- and post-processing functions for custom behaviors.
 3. Extend functionality without modifying the core code.
 
----
 
 ## 🛠️ Requirements
 
 This plugin is designed to have minimum requirements, only tmux and python3. It does not require special python modules to be installed. It has been tested on tmux 3.4 and python 3.13.
 It should be possible to ensure backward compatibility with minimum changes, but has to be tested. Please open an [issue](https://github.com/alberti42/tmux-fzf-links/issues) if you encounter issues of back compatibility.
 
----
 
 ## 🎥 Screencast
 
