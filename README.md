@@ -1,6 +1,6 @@
 # 🚀 tmux-fzf-links
 
-**tmux-fzf-links** is a versatile tmux plugin that allows you to search for and open links directly from your terminal using fuzzy search powered by [fzf](https://github.com/junegunn/fzf). The plugin supports both default and user-defined schemes, offering unmatched flexibility and integration with tmux popup windows.
+**tmux-fzf-links** is a versatile tmux plugin that allows you to search for, copy to clipboard, and open links directly from your terminal using fuzzy search powered by [fzf](https://github.com/junegunn/fzf). The plugin supports both default and user-defined schemes, offering unmatched flexibility and integration with tmux popup windows.
 
 The default schemes include recognition of:
 
@@ -22,7 +22,7 @@ The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmu
 - **Flexible Open Commands**: Configure your favorite editor, browser, or custom command to open links.
 - **Dynamic Logging**: Output logs to tmux messages and/or a file, with adjustable verbosity.
 - **Colorized Links**: Enhance readability with colorized links, using `$LS_COLORS` for files and directories.
-- **Facebook-Picker-like Behavior**: By pressing META-ENTER, instead of executing the configured actions, the selected items are copied to tmux buffer and your system's clipboard.
+- **Clipboard support**: By pressing META-ENTER, the selected items are copied to tmux buffer and your system's clipboard, instead of executing the configured actions.
 
 ---
 
@@ -142,6 +142,7 @@ set-option -g @fzf-links-python "python3"
 # set-option -g @fzf-links-user-schemes-path "~/.tmux/plugins/tmux-fzf-links/user_schemes/user_schemes.py"
 set-option -g @fzf-links-use-colors on
 # set-option -g @fzf-links-ls-colors-filename "~/.cache/tmux-fzf-links/cached_ls_colors.txt"
+set-option -g @fzf-links-hide-fzf_header on
 
 run-shell "~/.local/share/tmux-fzf-links/fzf-links.tmux"
 ```
@@ -162,7 +163,11 @@ Comment out the options you find useful and replace the placeholders with approp
    set-option -g @fzf-links-editor-open-cmd '/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl'
    ```
 
+   Default setting: `tmux new-window -n 'vim' vim +%line '%file'`
+
 2. **`@fzf-links-browser-open-cmd`**: This option specifies the command for opening the browser. User `%url` as the placeholder for the url to be opened.
+
+	 Default setting: `firefox '%url'`
 
 3. **`@fzf-links-fzf-display-options`**: This option specifies the arguments passed to `fzf`. Refer to the man page of [`fzf`](https://github.com/junegunn/fzf#options) for detailed documentation of the available arguments. In addition to the fzf arguments, this option can contain additional argument, which are specific to this plugin and documented below:
 
@@ -178,12 +183,11 @@ Comment out the options you find useful and replace the placeholders with approp
 
    	- **`--maxnum-displayed`**: A custom option added by this plugin to limit the maximum number of matches displayed in the `fzf` popup. If the total matches exceed this number, the plugin ensures that only up to `--maxnum-displayed` matches are shown. This is particularly helpful for avoiding oversized popups when many matches are present. 
 
-   Example:  
-   ```tmux
-   set-option -g @fzf-links-fzf-display-options '-w 100% --maxnum-displayed 10 --multi --no-preview'
-   ```
+   Default setting: `-w 100% --maxnum-displayed 15 --multi --track --no-preview`
 
-4. **`@fzf-links-history-lines`**: An integer number determining how many extra lines of history to consider. By default, it is set to 0.
+4. **`@fzf-links-history-lines`**: An integer number determining how many extra lines of history to consider.
+
+	 Default setting: `0`
 
 5. **`@fzf-links-ls-colors-filename`**: A file containing the content of $LS_COLORS. For example, you can save $LS_COLORS to a cached file using:
 	 ```bash
@@ -192,15 +196,23 @@ Comment out the options you find useful and replace the placeholders with approp
 
 	 Using such a file is not strictly necessary if `$LS_COLORS` is available in the environment. Use `@fzf-links-ls-colors-filename` only if `tmux` is launched directly as the first process in the terminal, bypassing the shell initialization where `$LS_COLORS` is set.
 
+	Default setting: `""`
+
 6. **`@fzf-links-path-extension`**: This option is also not strictly necessary. It is only required if `fzf-tmux` or `tmux` binaries are not in the `$PATH` that was available when `tmux` started. The plugin only requires these two processes.
+    
+   Default setting: `""`
 
 7. **`@fzf-links-python`** and **`@fzf-links-python-path`**: These two options allow specifying the path to the Python interpreter and, if needed, to a Python `site-packages` directory, which is appended to `$PYTHONPATH`. The plugin does not rely on any external dependencies. However, you may want to import external modules installed in `site-packages` to extend the functionality of the plugin in `user_schemes`.
 
+   Default setting: `""`
+
 8. 🔍 **Logging**: Control logging levels via these options:
 
-   - `@fzf-links-loglevel-tmux`: Adjust tmux log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`).
-   - `@fzf-links-loglevel-file`: Set log verbosity for file logs.
-   - `@fzf-links-log-filename`: Specify the log file location. Omit this property or set it to an empty string to prevent logging to file.
+   - `@fzf-links-loglevel-tmux`: Adjust tmux log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`). Default: `WARNING`
+   - `@fzf-links-loglevel-file`: Set log verbosity for file logs. Default: `DEBUG`
+   - `@fzf-links-log-filename`: Specify the log file location. Omit this property or set it to an empty string to prevent logging to file. Default: `""`
+
+9. **`@fzf-links-hide-fzf_header`**: Prevent the header with instructions from appearing in fzf (`on` or `off`). Default: `off`.
 
 ### Tmux popup borders
 
