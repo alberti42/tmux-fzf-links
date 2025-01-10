@@ -17,6 +17,13 @@ from tmux_fzf_links.logging import set_up_logger
 from .colors import colors
 from .configs import configs
 
+if sys.version_info >= (3, 12):  # For Python 3.12 and newer
+    from typing import override
+elif sys.version_info < (3, 12):  # For Python 3.8 and older
+    # Fallback for Python < 3.12
+    def override(method):
+        return method
+        
 from .opener import OpenerType, PreHandledMatch, open_link, SchemeEntry
 from .errors_types import CommandFailed, FailedChDir, FzfError, FzfUserInterrupt, MissingPostHandler, NoSuitableAppFound, PatternNotMatching, LsColorsNotConfigured
 from .default_schemes import default_schemes
@@ -190,7 +197,7 @@ def run(
             # Skip matches for texts that has already been processed by a previous scheme
             if pre_handled_match and entire_match not in seen:
                 if pre_handled_match["tag"] not in scheme["tags"]:
-                    logger.warning(f"the dynamically returned '{pre_handled_match["tag"]}' is not included in: {scheme["tags"]}")
+                    logger.warning(f"the dynamically returned '{pre_handled_match['tag']}' is not included in: {scheme['tags']}")
                     continue
 
                 seen.add(entire_match)
@@ -212,9 +219,9 @@ def run(
         
     # Number the items
     numbered_choices = [f"{colors.index_color}{idx:4d}{colors.reset_color} {colors.dash_color}-{colors.reset_color} " \
-        f"{colors.tag_color}{('['+item[0]["tag"]+']').ljust(max_len_tag_names+2)}{colors.reset_color} {colors.dash_color}-{colors.reset_color} " \
+        f"{colors.tag_color}{('['+item[0]['tag']+']').ljust(max_len_tag_names+2)}{colors.reset_color} {colors.dash_color}-{colors.reset_color} " \
         # add 2 character because of `[` and `]` \
-        f"{item[0]["display_text"]}" for idx, item in enumerate(sorted_choices, 1)]
+        f"{item[0]['display_text']}" for idx, item in enumerate(sorted_choices, 1)]
 
     # Run fzf and get selected items
     try:
@@ -300,11 +307,11 @@ def run(
                 post_handled_link = post_handler(rematch)    
             else:
                 if scheme["opener"] == OpenerType.EDITOR:
-                    post_handled_link = {'file':match.group(0)}
+                    post_handled_link = {'file':rematch.group(0)}
                 elif scheme["opener"] == OpenerType.BROWSER:
-                    post_handled_link = {'url':match.group(0)}
+                    post_handled_link = {'url':rematch.group(0)}
                 else:
-                    raise MissingPostHandler(f"scheme with tags {scheme["tags"]} configured as custom opener but missing post handler")
+                    raise MissingPostHandler(f"scheme with tags {scheme['tags']} configured as custom opener but missing post handler")
             try:
                 open_link(post_handled_link,editor_open_cmd,browser_open_cmd,schemes[index_scheme]["opener"])
             except (NoSuitableAppFound, PatternNotMatching, CommandFailed) as e:
@@ -319,8 +326,9 @@ def run(
 
     if clipboard != []:
         sss:str = "s" if len(clipboard)>1 else ""
+        clipped_text = "\n".join(clipboard)
         tmux_buffer_action:list[str] = [
-                'tmux', 'set-buffer', '-w', f'{"\n".join(clipboard)}', ';',
+                'tmux', 'set-buffer', '-w', f'{clipped_text}', ';',
                 'display-message', f"copied selection{sss} to tmux buffer"
             ]
         try:

@@ -59,9 +59,9 @@ def open_link(post_handled_match:PostHandledMatch, editor_open_cmd:str, browser_
         elif shutil.which("open"):
             template = "open '%%file'"
         elif opener==OpenerType.EDITOR and "EDITOR" in os.environ:
-            template = f"{os.environ["EDITOR"]} '%%file'"
+            template = f"{os.environ['EDITOR']} '%%file'"
         elif opener==OpenerType.BROWSER and "BROWSER" in os.environ:
-            template = f"{os.environ["BROWSER"]} '%%file'"
+            template = f"{os.environ['BROWSER']} '%%file'"
         else:
             raise NoSuitableAppFound("no suitable app was found to open the link")
 

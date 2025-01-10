@@ -24,15 +24,23 @@ The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmu
 - **Colorized Links**: Enhance readability with colorized links, using `$LS_COLORS` for files and directories.
 - **Clipboard support**: By pressing META-ENTER, the selected items are copied to tmux buffer and your system's clipboard, instead of executing the configured actions.
 
----
-
-## 🧩 Extensibility
+### 🧩 Extensibility
 
 The plugin's Python-based architecture enables advanced users to:
 
 1. Define intricate regular expressions.
 2. Implement pre- and post-processing functions for custom behaviors.
 3. Extend functionality without modifying the core code.
+
+
+### 🛠️ Requirements
+
+This plugin is designed to have minimum requirements, only tmux and python3. It does not require special python modules to work. It has been successfully tested with:
+
+- tmux from 3.4 to 3.5
+- python from 3.10 to 3.13
+
+It should be possible to ensure backward compatibility with minimum changes, but has to be tested. Please open an [issue](https://github.com/alberti42/tmux-fzf-links/issues) if you encounter issues of back compatibility.
 
 ---
 
@@ -121,6 +129,7 @@ run-shell "$ZINIT_HOME/plugins/alberti42---tmux-fzf-links/fzf-links.tmux"
 
 replacing `$ZINIT_HOME` with the actual value of your zinit home directory.
 
+---
 
 ## ⚙️ Configuration
 
