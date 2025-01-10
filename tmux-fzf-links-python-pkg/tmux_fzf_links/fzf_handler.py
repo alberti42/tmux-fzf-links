@@ -10,6 +10,7 @@ import sys
 from typing import TypedDict
 
 from .errors_types import FailedTmuxPaneSize, FzfError, FzfUserInterrupt
+from .configs import configs
 
 class FzfReturnType(TypedDict):
     selection:list[str]
@@ -53,7 +54,7 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
     # Parse user options into a list
     cmd_user_args: list[str] = shlex.split(fzf_display_options)
 
-    VER_BORDER = 4 # number of characters taken by vertical border
+    VER_BORDER = 4 + (0 if configs.hide_fzf_header else 1)  # number of characters taken by vertical border
     HOR_BORDER = 2 # number of characters taken by horizontal border
 
     # Command to launch tmux popup
@@ -137,9 +138,8 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
     fzf_args = ['--no-sort','--bind','alt-enter:print(META-ENTER)+accept',  '--bind', 'enter:print(ENTER)+accept']
     if use_ls_colors:
         fzf_args.append('--ansi')
-    
-    with_header = False
-    if with_header:
+
+    if not configs.hide_fzf_header:
         if sys.platform == "darwin":            
             meta_key = "⌥" # option key
         elif sys.platform == "win32":
@@ -150,7 +150,6 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
 
         fzf_args.extend(['--header',f"Press {meta_key}+↵ to copy selection to tmux buffer"])
 
-    
     # Combine fzf arguments, giving user options higher priority
     cmd_args = fzf_args + cmd_user_args
 
