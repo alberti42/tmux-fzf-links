@@ -48,7 +48,7 @@ It should be possible to ensure backward compatibility with minimum changes, but
 
 Watch the plugin in action to see how it enhances your tmux workflow!
 
-<a href="https://asciinema.org/a/697089" target="_blank"><img src="https://asciinema.org/a/697089.svg" /></a>
+<https://github.com/user-attachments/assets/01509743-4ae6-4916-91a0-372bec200ed1>
 
 ---
 
