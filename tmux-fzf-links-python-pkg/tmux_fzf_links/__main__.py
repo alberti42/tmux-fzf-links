@@ -4,6 +4,7 @@
 #   Author: (c) 2024 Andrea Alberti
 #===============================================================================
 
+from locale import normalize
 import os
 import re
 import subprocess
@@ -11,6 +12,7 @@ import sys
 import logging
 import importlib.util
 import pathlib
+import unicodedata
 
 from tmux_fzf_links.fzf_handler import FzfReturnType, run_fzf
 from tmux_fzf_links.logging import set_up_logger
@@ -66,11 +68,14 @@ def trim_str(s:str) -> str:
     """Trim leading and trailing spaces from a string."""
     return s.strip()
 
-def remove_escape_sequences(text:str) -> str:
+def remove_escape_sequences_and_normalize(text:str) -> str:
     # Regular expression to match ANSI escape sequences
     ansi_escape_pattern = r'\x1B\[[0-9;]*[mK]'
     # Replace escape sequences with an empty string
-    return re.sub(ansi_escape_pattern, '', text)
+    unescaped = re.sub(ansi_escape_pattern, '', text)
+    # To deal with two different forms of handling diactrics, we normalize the string
+    normalized_unescaped = unicodedata.normalize("NFC", unescaped)
+    return normalized_unescaped
 
 def run(
         history_lines:str,
@@ -122,7 +127,7 @@ def run(
 
     # Capture tmux content
     capture_str:list[str]=['tmux', 'capture-pane', '-J', '-p', '-e', '-S', f'-{history_lines}']
-   
+
     content = subprocess.check_output(
             capture_str,
             shell=False,
@@ -130,7 +135,7 @@ def run(
         )
 
     # Remove escape sequences
-    content=remove_escape_sequences(content)
+    content=remove_escape_sequences_and_normalize(content)
 
     # Load user schemes
     user_schemes:list[SchemeEntry]

@@ -3,7 +3,7 @@
 #===============================================================================
 #   Author: (c) 2024 Andrea Alberti
 #===============================================================================
-    
+
 import re
 import sys
 import shlex
@@ -101,7 +101,11 @@ url_scheme:SchemeEntry = {
 
 def file_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
     # Get the matched file path
-    file_path:str = match.group("link1") or match.group("link2")
+    file_path:str|None = match.group("link1") or match.group("link2") or match.group("link3")
+
+    if file_path == None:
+        # This is not supposed to happen, but to be on the safe side
+        return None
 
     # Drop matches containing only `.` such as current and previous folder
     if all(char == '.' for char in file_path):
@@ -110,26 +114,27 @@ def file_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
     # Return the fully resolved path
     resolved_path = heuristic_find_file(file_path)
     
-    if resolved_path:
-        tag="dir" if resolved_path.is_dir() else "file"
-        if colors.enabled:
-            color_code=colors.get_file_color(resolved_path)
-            display_text = f"\033[{color_code}m{match.group(0)}\033[0m"
-        else:
-            display_text = f"{str(match.group(0))}"
-        return { 
-            "display_text":display_text,
-            "tag": tag
-            }
-    else:
+    if resolved_path == None:
         return None
 
+    tag="dir" if resolved_path.is_dir() else "file"
+    if colors.enabled:
+        color_code=colors.get_file_color(resolved_path)
+        display_text = f"\033[{color_code}m{file_path}\033[0m"
+    else:
+        display_text = f"{file_path}"
+    return { 
+        "display_text":display_text,
+        "tag": tag
+        }
+    
 def file_post_handler(match:re.Match[str]) -> list[str]:
 
     # Get the matched file path
-    file_path:str = match.group("link1") or match.group("link2")
+    file_path:str = match.group("link1") or match.group("link2") or match.group("link3")
     line:str|None = match.group("line")
     if line is None:
+        # Open the first line by default
         line = "1"
 
     resolved_path = heuristic_find_file(file_path)
@@ -164,7 +169,7 @@ file_scheme:SchemeEntry = {
         "opener": OpenerType.CUSTOM,
         "post_handler": file_post_handler,
         "pre_handler": file_pre_handler,
-        "regex": re.compile(r"(\'(?P<link1>\~?[a-zA-Z0-9_\/\-\. ]+)\'|(?P<link2>\~?[a-zA-Z0-9_\/\-\.]+))(\:(?P<line>\d+))?")
+        "regex": re.compile(r"(\'(?P<link1>\~?[a-zA-Z0-9_\u00C0-\u017F\/\-\. ]+)\'|(?P<link2>^\~?[a-zA-Z0-9_\u00C0-\u017F\/\-\. ]+$)|(?P<link3>\~?[a-zA-Z0-9_\u00C0-\u017F\/\-\.]+))(\:(?P<line>\d+))?",re.MULTILINE)
     }
 
 # <<< FILE SCHEME <<<
