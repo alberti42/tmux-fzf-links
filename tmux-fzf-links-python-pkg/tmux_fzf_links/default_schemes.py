@@ -171,11 +171,11 @@ file_scheme:SchemeEntry = {
         "pre_handler": file_pre_handler,
         "regex": re.compile(r"""
             (
-                \'(?P<link1>\~?[a-zA-Z0-9_\u00C0-\u017F\/\-\. ]+)\' # filename with no spaces, starting at the line beginning
+                (?P<link1>^[^<>:"/\\|?*\x00-\x1F]+$) # filename with spaces, starting at the line beginning
                 |
-                (?P<link2>^\~?[a-zA-Z0-9_\u00C0-\u017F\/\-\. ]+$) # filename not including spaces
+                \'(?P<link2>[^<>:"/\\|?*\x00-\x1F]+)\' # filename with spaces, quoted
                 |
-                (?P<link3>\~?[a-zA-Z0-9_\u00C0-\u017F\/\-\.]+) # filename with spaces, quoted
+                (?P<link3>[^\ <>:"/\\|?*\x00-\x1F]+) # filename not including spaces
             )
             (\:(?P<line>\d+))?
         """,re.MULTILINE | re.VERBOSE)
