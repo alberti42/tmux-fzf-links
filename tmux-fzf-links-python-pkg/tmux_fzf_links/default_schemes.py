@@ -169,7 +169,16 @@ file_scheme:SchemeEntry = {
         "opener": OpenerType.CUSTOM,
         "post_handler": file_post_handler,
         "pre_handler": file_pre_handler,
-        "regex": re.compile(r"(\'(?P<link1>\~?[a-zA-Z0-9_\u00C0-\u017F\/\-\. ]+)\'|(?P<link2>^\~?[a-zA-Z0-9_\u00C0-\u017F\/\-\. ]+$)|(?P<link3>\~?[a-zA-Z0-9_\u00C0-\u017F\/\-\.]+))(\:(?P<line>\d+))?",re.MULTILINE)
+        "regex": re.compile(r"""
+            (
+                \'(?P<link1>\~?[a-zA-Z0-9_\u00C0-\u017F\/\-\. ]+)\' # filename with no spaces, starting at the line beginning
+                |
+                (?P<link2>^\~?[a-zA-Z0-9_\u00C0-\u017F\/\-\. ]+$) # filename not including spaces
+                |
+                (?P<link3>\~?[a-zA-Z0-9_\u00C0-\u017F\/\-\.]+) # filename with spaces, quoted
+            )
+            (\:(?P<line>\d+))?
+        """,re.MULTILINE | re.VERBOSE)
     }
 
 # <<< FILE SCHEME <<<
