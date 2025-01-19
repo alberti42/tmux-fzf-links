@@ -23,7 +23,7 @@ ip_scheme:SchemeEntry = {
         "opener": OpenerType.CUSTOM,
         "post_handler": ip_post_handler,
         "pre_handler": ip_pre_handler,
-        "regex": re.compile(r"(?<!://)(?P<ip>\b(?:\d{1,3}\.){3}\d{1,3}\b(:\d+)?)")
+        "regex": [re.compile(r"(?<!://)(?P<ip>\b(?:\d{1,3}\.){3}\d{1,3}\b(:\d+)?)")]
     }
 
 # <<< IP SCHEME <<<

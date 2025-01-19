@@ -4,7 +4,6 @@
 #   Author: (c) 2024 Andrea Alberti
 #===============================================================================
 
-from locale import normalize
 import os
 import re
 import subprocess
@@ -34,30 +33,44 @@ from .default_schemes import default_schemes
 def find_matches_with_backtracking(content:str, scheme:SchemeEntry) -> Generator[tuple[PreHandledMatch, str, int], None, None]:
     pos:int = 0
     while pos < len(content):
-        match = scheme["regex"].search(content, pos)
-        if not match:
-            break  # No more matches
+        match_found:bool = False
+        newpos = pos
+        for regex in scheme["regex"]:
+            match = regex.search(content, pos)
+            if not match:
+                continue  # No more matches
+            else:
+                match_found = True
 
-        entire_match:str = match.group(0)
-        match_start:int = match.start()
-        # Extract the match string
-        pre_handled_match:PreHandledMatch | None
-        if scheme['pre_handler']:
-            pre_handled_match = scheme['pre_handler'](match)
-        else:
-            # fallback case when no pre_handler is provided for the scheme
-            pre_handled_match = {
-                "display_text": entire_match,
-                "tag": scheme["tags"][0]
-            }
+            entire_match:str = match.group(0)
+            match_start:int = match.start()
 
-        # Validate the current match
-        if pre_handled_match:
-            yield (pre_handled_match,entire_match,match_start,)  # Return valid match to the caller
-            pos = match.end()  # Move past this match
+            logging.debug(f"POS: {pos:d} - {entire_match}")
+
+            # Extract the match string
+            pre_handled_match:PreHandledMatch | None
+            if scheme['pre_handler']:
+                pre_handled_match = scheme['pre_handler'](match)
+            else:
+                # fallback case when no pre_handler is provided for the scheme
+                pre_handled_match = {
+                    "display_text": entire_match,
+                    "tag": scheme["tags"][0]
+                }
+
+            # Validate the current match
+            if pre_handled_match:
+                yield (pre_handled_match,entire_match,match_start,)  # Return valid match to the caller
+                newpos = match.end()
+                break
+            else:
+                newpos = max(newpos,match.end())  # Move past this match
+                continue # If invalid, try the next regex
+
+        if match_found:
+            pos = newpos
         else:
-            pos += 1  # If invalid, retry from the next character
-            continue
+            break # No more matches
 
 def load_user_module(file_path: str) -> tuple[list[SchemeEntry],list[str]]:
     """Dynamically load a Python module from the given file path."""
@@ -299,7 +312,7 @@ def run(
             # to simply run once more the match for the selected options. The overhead
             # is negligible and we avoid saving in memory all matches for all displayed
             # options.
-            rematch=scheme["regex"].search(selected_item)
+            rematch=scheme["regex"][0].search(selected_item)
             if rematch is None:
                 logger.error(f"error: pattern did not match unexpectedly")
                 continue
