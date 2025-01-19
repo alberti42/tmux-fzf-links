@@ -184,8 +184,12 @@ def run(
 
     # Process each scheme
     for scheme in schemes:
+        pos = 0
         # Use regex.finditer to iterate over all matches
-        for match in scheme['regex'].finditer(content):
+        while pos < len(content):
+            match = scheme['regex'].search(content, pos)
+            if not match:
+                break
             entire_match = match.group(0)
             match_start = match.start()
             # Extract the match string
@@ -198,6 +202,13 @@ def run(
                     "display_text": entire_match,
                     "tag": scheme["tags"][0]
                 }
+
+            if pre_handled_match:
+                pos = match.end()  # Move forward
+            else:
+                pos += 1  # Retry at the next character
+                continue
+
             # Skip matches for which the pre_handler returns None
             # Skip matches for texts that has already been processed by a previous scheme
             if pre_handled_match and entire_match not in seen:
