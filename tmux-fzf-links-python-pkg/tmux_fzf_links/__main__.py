@@ -16,7 +16,7 @@ import unicodedata
 
 from tmux_fzf_links.fzf_handler import FzfReturnType, run_fzf
 from tmux_fzf_links.logging import set_up_logger
-from typing import Generator
+from typing import Generator, Match
 from .colors import colors
 from .configs import configs
 
@@ -31,7 +31,7 @@ from .opener import OpenerType, PreHandledMatch, open_link, SchemeEntry
 from .errors_types import CommandFailed, FailedChDir, FzfError, FzfUserInterrupt, MissingPostHandler, NoSuitableAppFound, PatternNotMatching, LsColorsNotConfigured
 from .default_schemes import default_schemes
 
-def find_matches_with_backtracking(content:str, scheme:SchemeEntry) -> Generator[tuple[PreHandledMatch, str, int], None, None]:
+def find_matches_with_backtracking(content:str, scheme:SchemeEntry) -> Generator[tuple[PreHandledMatch, str, int,Match[str]], None, None]:
     pos:int = 0
     while pos < len(content):
         match = scheme["regex"].search(content, pos)
@@ -53,7 +53,7 @@ def find_matches_with_backtracking(content:str, scheme:SchemeEntry) -> Generator
 
         # Validate the current match
         if pre_handled_match:
-            yield (pre_handled_match,entire_match,match_start,)  # Return valid match to the caller
+            yield (pre_handled_match,entire_match,match_start,match,)  # Return valid match to the caller
             pos = match.end()  # Move past this match
         else:
             pos += 1  # If invalid, retry from the next character
@@ -209,12 +209,12 @@ def run(
     # We use the unique set as an expedient to sort over
     # pre_handled_text while keeping the original text
     seen:set[str] = set()
-    items:list[tuple[PreHandledMatch,str,int]] = []
+    items:list[tuple[PreHandledMatch,str,int,Match[str]]] = []
 
     # Process each scheme
     for scheme in schemes:
         # Use regex.finditer to iterate over all matches
-        for pre_handled_match,entire_match,match_start in find_matches_with_backtracking(content,scheme):
+        for pre_handled_match,entire_match,match_start,match in find_matches_with_backtracking(content,scheme):
 
             # Skip matches for which the pre_handler returns None
             # Skip matches for texts that has already been processed by a previous scheme
@@ -225,7 +225,7 @@ def run(
 
                 seen.add(entire_match)
                 # We keep a copy of the original matched text for later
-                items.append((pre_handled_match,entire_match,match_start,))
+                items.append((pre_handled_match,entire_match,match_start,match,))
     # Clean up no longer needed variables
     del seen
     
@@ -282,7 +282,7 @@ def run(
                 idx:int=int(idx_str,10)
                 # pick the original item to be searched again
                 # before passing the `fzf_match` object to the post handler
-                selected_item=sorted_choices[idx-1][1]
+                selected_item=sorted_choices[idx-1]
             except:
                 logger.error(f"error: malformed selection: {selected_choice}")
                 continue
@@ -295,20 +295,13 @@ def run(
 
             scheme=schemes[index_scheme]
 
-            # We did not store the state of all matches. It is faster/more convenient
-            # to simply run once more the match for the selected options. The overhead
-            # is negligible and we avoid saving in memory all matches for all displayed
-            # options.
-            rematch=scheme["regex"].search(selected_item)
-            if rematch is None:
-                logger.error(f"error: pattern did not match unexpectedly")
-                continue
+            selected_match=selected_item[3]
 
             if is_meta_pressed:
                 # If META (i.e. alt / option key) is pressed, then we copy to clipboard
                 # the result of the pre handler.
                 if scheme['pre_handler']:
-                    pre_handled_match = scheme['pre_handler'](rematch)
+                    pre_handled_match = scheme['pre_handler'](selected_match)
                 else:
                     # fallback case when no pre_handler is provided for the scheme
                     pre_handled_match = {
@@ -327,12 +320,12 @@ def run(
 
             # Process the rematch with the post handler
             if post_handler:
-                post_handled_link = post_handler(rematch)    
+                post_handled_link = post_handler(selected_match)    
             else:
                 if scheme["opener"] == OpenerType.EDITOR:
-                    post_handled_link = {'file':rematch.group(0)}
+                    post_handled_link = {'file':selected_match.group(0)}
                 elif scheme["opener"] == OpenerType.BROWSER:
-                    post_handled_link = {'url':rematch.group(0)}
+                    post_handled_link = {'url':selected_match.group(0)}
                 else:
                     raise MissingPostHandler(f"scheme with tags {scheme['tags']} configured as custom opener but missing post handler")
             try:
