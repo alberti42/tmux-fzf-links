@@ -16,6 +16,7 @@ import unicodedata
 
 from tmux_fzf_links.fzf_handler import FzfReturnType, run_fzf
 from tmux_fzf_links.logging import set_up_logger
+from typing import Generator
 from .colors import colors
 from .configs import configs
 
@@ -29,6 +30,34 @@ elif sys.version_info < (3, 12):  # For Python 3.8 and older
 from .opener import OpenerType, PreHandledMatch, open_link, SchemeEntry
 from .errors_types import CommandFailed, FailedChDir, FzfError, FzfUserInterrupt, MissingPostHandler, NoSuitableAppFound, PatternNotMatching, LsColorsNotConfigured
 from .default_schemes import default_schemes
+
+def find_matches_with_backtracking(content:str, scheme:SchemeEntry) -> Generator[tuple[PreHandledMatch, str, int], None, None]:
+    pos:int = 0
+    while pos < len(content):
+        match = scheme["regex"].search(content, pos)
+        if not match:
+            break  # No more matches
+
+        entire_match:str = match.group(0)
+        match_start:int = match.start()
+        # Extract the match string
+        pre_handled_match:PreHandledMatch | None
+        if scheme['pre_handler']:
+            pre_handled_match = scheme['pre_handler'](match)
+        else:
+            # fallback case when no pre_handler is provided for the scheme
+            pre_handled_match = {
+                "display_text": entire_match,
+                "tag": scheme["tags"][0]
+            }
+
+        # Validate the current match
+        if pre_handled_match:
+            yield (pre_handled_match,entire_match,match_start,)  # Return valid match to the caller
+            pos = match.end()  # Move past this match
+        else:
+            pos += 1  # If invalid, retry from the next character
+            continue
 
 def load_user_module(file_path: str) -> tuple[list[SchemeEntry],list[str]]:
     """Dynamically load a Python module from the given file path."""
@@ -184,34 +213,12 @@ def run(
 
     # Process each scheme
     for scheme in schemes:
-        pos = 0
         # Use regex.finditer to iterate over all matches
-        while pos < len(content):
-            match = scheme['regex'].search(content, pos)
-            if not match:
-                break
-            entire_match = match.group(0)
-            match_start = match.start()
-            # Extract the match string
-            pre_handled_match:PreHandledMatch | None
-            if scheme['pre_handler']:
-                pre_handled_match = scheme['pre_handler'](match)
-            else:
-                # fallback case when no pre_handler is provided for the scheme
-                pre_handled_match = {
-                    "display_text": entire_match,
-                    "tag": scheme["tags"][0]
-                }
-
-            if pre_handled_match:
-                pos = match.end()  # Move forward
-            else:
-                pos += 1  # Retry at the next character
-                continue
+        for pre_handled_match,entire_match,match_start in find_matches_with_backtracking(content,scheme):
 
             # Skip matches for which the pre_handler returns None
             # Skip matches for texts that has already been processed by a previous scheme
-            if pre_handled_match and entire_match not in seen:
+            if entire_match not in seen:
                 if pre_handled_match["tag"] not in scheme["tags"]:
                     logger.warning(f"the dynamically returned '{pre_handled_match['tag']}' is not included in: {scheme['tags']}")
                     continue
