@@ -31,7 +31,7 @@ class SchemeEntry(TypedDict):
     opener: OpenerType
     pre_handler: Callable[[re.Match[str]], PreHandledMatch | None] | None  # A function that takes a string and returns a string
     post_handler: Callable[[re.Match[str]], PostHandledMatch] | None  # A function that takes a string and returns a string
-    regex: re.Pattern[str]            # A compiled regex pattern
+    regex: list[re.Pattern[str]]            # A compiled regex pattern
 
 def open_link(post_handled_match:PostHandledMatch, editor_open_cmd:str, browser_open_cmd:str, opener:OpenerType):
     """Open a link using the appropriate handler."""

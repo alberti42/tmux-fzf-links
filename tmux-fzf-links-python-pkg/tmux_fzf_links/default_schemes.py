@@ -4,6 +4,7 @@
 #   Author: (c) 2024 Andrea Alberti
 #===============================================================================
 
+import logging
 import re
 import sys
 import shlex
@@ -26,7 +27,7 @@ git_scheme:SchemeEntry = {
             "display_text": f"{colors.rgb_color(0,255,115)}{m.group(0)}{colors.reset_color}",
             "tag": "git"
         },
-        "regex": re.compile(r"(ssh://)?git@(?P<server>[^ \t\n\"\'\)\]\}]+)\:(?P<repo>[^ \.\t\n\"\'\)\]\}]+)")
+        "regex": [re.compile(r"(ssh://)?git@(?P<server>[^ \t\n\"\'\)\]\}]+)\:(?P<repo>[^ \.\t\n\"\'\)\]\}]+)")]
     }
 
 # <<< GIT SCHEME <<<
@@ -77,7 +78,7 @@ code_error_scheme:SchemeEntry = {
             "opener": OpenerType.EDITOR,
             "post_handler": code_error_post_handler,
             "pre_handler": code_error_pre_handler,
-            "regex": re.compile(r"File \"(?P<file>...*?)\"\, line (?P<line>[0-9]+)")
+            "regex": [re.compile(r"File \"(?P<file>...*?)\"\, line (?P<line>[0-9]+)")]
         }
 
 # <<< CODE ERROR SCHEME <<<
@@ -92,7 +93,7 @@ url_scheme:SchemeEntry = {
             "display_text": f"{colors.rgb_color(200,0,255)}{m.group(0)}{colors.reset_color}",
             "tag": "url"
         },
-        "regex": re.compile(r"https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*")
+        "regex": [re.compile(r"https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*")]
     }
 
 # <<< URL SCHEME <<<
@@ -101,8 +102,8 @@ url_scheme:SchemeEntry = {
 
 def file_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
     # Get the matched file path
-    file_path:str|None = match.group("link1") or match.group("link2") or match.group("link3")
-
+    file_path:str|None = match.group("link")
+    
     if file_path == None:
         # This is not supposed to happen, but to be on the safe side
         return None
@@ -116,7 +117,7 @@ def file_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
     
     if resolved_path == None:
         return None
-
+    
     tag="dir" if resolved_path.is_dir() else "file"
     if colors.enabled:
         color_code=colors.get_file_color(resolved_path)
@@ -131,7 +132,7 @@ def file_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
 def file_post_handler(match:re.Match[str]) -> list[str]:
 
     # Get the matched file path
-    file_path:str = match.group("link1") or match.group("link2") or match.group("link3")
+    file_path:str = match.group("link")
     line:str|None = match.group("line")
     if line is None:
         # Open the first line by default
@@ -169,16 +170,11 @@ file_scheme:SchemeEntry = {
         "opener": OpenerType.CUSTOM,
         "post_handler": file_post_handler,
         "pre_handler": file_pre_handler,
-        "regex": re.compile(r"""
-            (
-                (?P<link1>^[^<>:"/\\|?*\x00-\x1F]+$) # filename with spaces, starting at the line beginning
-                |
-                \'(?P<link2>[^<>:"/\\|?*\x00-\x1F]+)\' # filename with spaces, quoted
-                |
-                (?P<link3>[^\ <>:"/\\|?*\x00-\x1F]+) # filename not including spaces
-            )
-            (\:(?P<line>\d+))?
-        """,re.MULTILINE | re.VERBOSE)
+        "regex": [
+            re.compile(r"(?P<link1>^[^<>:\"/\\|?*\x00-\x1F]+$)(\:(?P<line>\d+))?",re.MULTILINE), # filename with spaces, starting at the line beginning
+            re.compile(r"\'(?P<link2>[^<>:\"/\\|?*\x00-\x1F]+)\'(\:(?P<line>\d+))?",re.MULTILINE), # filename not including spaces
+            re.compile(r"(?P<link3>[^\ <>:\"/\\|?*\x00-\x1F]+)(\:(?P<line>\d+))?",re.MULTILINE), # filename with spaces, quoted
+        ]
     }
 
 # <<< FILE SCHEME <<<

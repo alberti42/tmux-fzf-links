@@ -4,7 +4,6 @@
 #   Author: (c) 2024 Andrea Alberti
 #===============================================================================
 
-from locale import normalize
 import os
 import re
 import subprocess
@@ -34,7 +33,7 @@ from .default_schemes import default_schemes
 def find_matches_with_backtracking(content:str, scheme:SchemeEntry) -> Generator[tuple[PreHandledMatch, str, int,Match[str]], None, None]:
     pos:int = 0
     while pos < len(content):
-        match = scheme["regex"].search(content, pos)
+        match = scheme["regex"][0].search(content, pos)
         if not match:
             break  # No more matches
 
