@@ -257,7 +257,7 @@ The plugin uses a **list of dictionaries** to define schemes, where each diction
   1. **User hints**: Displayed in the fzf interface to help users understand the type of link.
   2. **Post-processing rules**: Used internally by the plugin to determine the appropriate action based on the selected tag.
 - **`opener`**: Specifies the application or process used to open the link (e.g., a browser, editor, or custom process).
-- **`regex`**: A regular expression that matches the target pattern.
+- **`regex`**: A list of regular expressions matching the target patterns. For most applications, a single regex is sufficient. Use multiple regex to match alternatives.
 - **`pre_handler`**: A function that processes the match and returns a dictionary containing:
   - `display_text`: The text displayed in the fzf interface.
   - `tag`: One of the tags defined in `tags`.
@@ -269,7 +269,7 @@ default_schemes = [
     {
         "tags": ("url",),
         "opener": OpenerType.BROWSER,
-        "regex": re.compile(r"https?://[^\s]+"),
+        "regex": [re.compile(r"https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*")],
         "pre_handler": lambda m: {
             "display_text": f"{colors.rgb_color(200,0,255)}{m.group(0)}{colors.reset_color}",
             "tag": "url"
@@ -279,7 +279,11 @@ default_schemes = [
     {
         "tags": ("file", "dir"),
         "opener": OpenerType.CUSTOM,
-        "regex": re.compile(r"(\'(?P<link1>\~?[a-zA-Z0-9_\/\-\:\. ]+)\'|(?P<link2>\~?[a-zA-Z0-9_\/\-\:\.]+))"),
+        "regex": [
+            re.compile(r"(?P<link>^[^<>:\"\\|?*\x00-\x1F]+)(\:(?P<line>\d+))?",re.MULTILINE), # filename with spaces, starting at the line beginning
+            re.compile(r"\'(?P<link>[^:\'\"|?*\x00-\x1F]+)\'(\:(?P<line>\d+))?"), # filename with spaces, quoted
+            re.compile(r"(?P<link>[^\ :\'\"|?*\x00-\x1F]+)(\:(?P<line>\d+))?"), # filename not including spaces
+        ],
         "pre_handler": file_pre_handler,
         "post_handler": file_post_handler,
     },
@@ -359,7 +363,7 @@ The corresponding scheme:
 ip_scheme: SchemeEntry = {
     "tags": ("IPv4",),
     "opener": OpenerType.BROWSER,
-    "regex": re.compile(r"(?<!://)(?P<ip>\b(?:\d{1,3}\.){3}\d{1,3}\b(:\d+)?)")
+    "regex": [re.compile(r"(?<!://)(?P<ip>\b(?:\d{1,3}\.){3}\d{1,3}\b(:\d+)?)")],
     "pre_handler": lambda m: {
         "display_text": m.group("ip"),
         "tag": "IPv4"
@@ -390,7 +394,7 @@ The corresponding scheme:
 code_error_scheme: SchemeEntry = {
     "tags": ("code err.", "Python"),
     "opener": OpenerType.EDITOR,
-    "regex": re.compile(r"File \"(?P<file>...*?)\", line (?P<line>[0-9]+)"),
+    "regex": [re.compile(r"File \"(?P<file>...*?)\"\, line (?P<line>[0-9]+)")],
     "pre_handler": code_error_pre_handler,
     "post_handler": code_error_post_handler,
 }
@@ -431,7 +435,11 @@ The corresponding scheme:
 file_scheme: SchemeEntry = {
     "tags": ("file", "dir"),
     "opener": OpenerType.CUSTOM,
-    "regex": re.compile(r"(\'(?P<link1>\~?[a-zA-Z0-9_\/\-\:\. ]+)\'|(?P<link2>\~?[a-zA-Z0-9_\/\-\:\.]+))"),
+    "regex": [
+            re.compile(r"(?P<link>^[^<>:\"\\|?*\x00-\x1F]+)(\:(?P<line>\d+))?",re.MULTILINE), # filename with spaces, starting at the line beginning
+            re.compile(r"\'(?P<link>[^:\'\"|?*\x00-\x1F]+)\'(\:(?P<line>\d+))?"), # filename with spaces, quoted
+            re.compile(r"(?P<link>[^\ :\'\"|?*\x00-\x1F]+)(\:(?P<line>\d+))?"), # filename not including spaces
+    ],
     "pre_handler": file_pre_handler,
     "post_handler": file_post_handler,
 }

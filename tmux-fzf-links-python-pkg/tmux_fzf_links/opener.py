@@ -25,12 +25,16 @@ class PreHandledMatch(TypedDict):
 
 PostHandledMatch = dict[str, str] | list[str]
 
+# Pre and post handler types
+PreHandler = Callable[[re.Match[str]], PreHandledMatch | None] | None
+PostHandler = Callable[[re.Match[str]], PostHandledMatch] | None
+
 # Define the structure of each scheme entry
 class SchemeEntry(TypedDict):
     tags: tuple[str,...]
     opener: OpenerType
-    pre_handler: Callable[[re.Match[str]], PreHandledMatch | None] | None  # A function that takes a string and returns a string
-    post_handler: Callable[[re.Match[str]], PostHandledMatch] | None  # A function that takes a string and returns a string
+    pre_handler: PreHandler  # A function that takes a string and returns a string
+    post_handler: PostHandler  # A function that takes a string and returns a string
     regex: list[re.Pattern[str]]            # A compiled regex pattern
 
 def open_link(post_handled_match:PostHandledMatch, editor_open_cmd:str, browser_open_cmd:str, opener:OpenerType):
@@ -95,4 +99,3 @@ def open_link(post_handled_match:PostHandledMatch, editor_open_cmd:str, browser_
 
     except Exception as e:
         raise CommandFailed(f'failed to execute command "{cmd}"')
-

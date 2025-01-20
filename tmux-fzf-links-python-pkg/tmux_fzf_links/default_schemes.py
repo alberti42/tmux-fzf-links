@@ -4,7 +4,6 @@
 #   Author: (c) 2024 Andrea Alberti
 #===============================================================================
 
-import logging
 import re
 import sys
 import shlex
@@ -171,9 +170,9 @@ file_scheme:SchemeEntry = {
         "post_handler": file_post_handler,
         "pre_handler": file_pre_handler,
         "regex": [
-            re.compile(r"(?P<link1>^[^<>:\"/\\|?*\x00-\x1F]+$)(\:(?P<line>\d+))?",re.MULTILINE), # filename with spaces, starting at the line beginning
-            re.compile(r"\'(?P<link2>[^<>:\"/\\|?*\x00-\x1F]+)\'(\:(?P<line>\d+))?",re.MULTILINE), # filename not including spaces
-            re.compile(r"(?P<link3>[^\ <>:\"/\\|?*\x00-\x1F]+)(\:(?P<line>\d+))?",re.MULTILINE), # filename with spaces, quoted
+            re.compile(r"(?P<link>^[^<>:\"\\|?*\x00-\x1F]+)(\:(?P<line>\d+))?",re.MULTILINE), # filename with spaces, starting at the line beginning
+            re.compile(r"\'(?P<link>[^:\'\"|?*\x00-\x1F]+)\'(\:(?P<line>\d+))?"), # filename with spaces, quoted
+            re.compile(r"(?P<link>[^\ :\'\"|?*\x00-\x1F]+)(\:(?P<line>\d+))?"), # filename not including spaces
         ]
     }
 

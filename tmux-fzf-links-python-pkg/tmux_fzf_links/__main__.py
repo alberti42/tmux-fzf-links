@@ -26,37 +26,9 @@ elif sys.version_info < (3, 12):  # For Python 3.8 and older
     def override(method):
         return method
         
-from .opener import OpenerType, PreHandledMatch, open_link, SchemeEntry
+from .opener import OpenerType, PreHandledMatch, PreHandler, open_link, SchemeEntry
 from .errors_types import CommandFailed, FailedChDir, FzfError, FzfUserInterrupt, MissingPostHandler, NoSuitableAppFound, PatternNotMatching, LsColorsNotConfigured
 from .default_schemes import default_schemes
-
-def find_matches_with_backtracking(content:str, scheme:SchemeEntry) -> Generator[tuple[PreHandledMatch, str, int,Match[str]], None, None]:
-    pos:int = 0
-    while pos < len(content):
-        match = scheme["regex"][0].search(content, pos)
-        if not match:
-            break  # No more matches
-
-        entire_match:str = match.group(0)
-        match_start:int = match.start()
-        # Extract the match string
-        pre_handled_match:PreHandledMatch | None
-        if scheme['pre_handler']:
-            pre_handled_match = scheme['pre_handler'](match)
-        else:
-            # fallback case when no pre_handler is provided for the scheme
-            pre_handled_match = {
-                "display_text": entire_match,
-                "tag": scheme["tags"][0]
-            }
-
-        # Validate the current match
-        if pre_handled_match:
-            yield (pre_handled_match,entire_match,match_start,match,)  # Return valid match to the caller
-            pos = match.end()  # Move past this match
-        else:
-            pos += 1  # If invalid, retry from the next character
-            continue
 
 def load_user_module(file_path: str) -> tuple[list[SchemeEntry],list[str]]:
     """Dynamically load a Python module from the given file path."""
@@ -213,18 +185,36 @@ def run(
     # Process each scheme
     for scheme in schemes:
         # Use regex.finditer to iterate over all matches
-        for pre_handled_match,entire_match,match_start,match in find_matches_with_backtracking(content,scheme):
+        for regex in scheme["regex"]:
+            for match in regex.finditer(content):
+            
+                entire_match:str = match.group(0)
+                match_start:int = match.start()
+                
+                # Extract and process the matching string
+                pre_handled_match:PreHandledMatch | None
+                if scheme["pre_handler"]:
+                    pre_handled_match = scheme["pre_handler"](match)
+                else:
+                    # fallback case when no pre_handler is provided for the scheme
+                    pre_handled_match = {
+                        "display_text": entire_match,
+                        "tag": scheme["tags"][0]
+                    }
 
-            # Skip matches for which the pre_handler returns None
-            # Skip matches for texts that has already been processed by a previous scheme
-            if entire_match not in seen:
-                if pre_handled_match["tag"] not in scheme["tags"]:
-                    logger.warning(f"the dynamically returned '{pre_handled_match['tag']}' is not included in: {scheme['tags']}")
-                    continue
+                # Validate the current match
+                if pre_handled_match:
+                    
+                    # Skip matches for which the pre_handler returns None
+                    # Skip matches for texts that has already been processed by a previous scheme
+                    if entire_match not in seen:
+                        if pre_handled_match["tag"] not in scheme["tags"]:
+                            logger.warning(f"the tag returned dynamically '{pre_handled_match['tag']}' is not included in: {scheme['tags']}")
+                            continue
 
-                seen.add(entire_match)
-                # We keep a copy of the original matched text for later
-                items.append((pre_handled_match,entire_match,match_start,match,))
+                        seen.add(entire_match)
+                        # We keep a copy of the original matched text for later
+                        items.append((pre_handled_match,entire_match,match_start,match,))
     # Clean up no longer needed variables
     del seen
     
@@ -233,7 +223,6 @@ def run(
         return
 
     # Sort items
-    sorted_choices = items
     items.sort(key=lambda x: x[2],reverse=True)
 
     # Find the maximum length in characters of the display text
@@ -243,7 +232,7 @@ def run(
     numbered_choices = [f"{colors.index_color}{idx:4d}{colors.reset_color} {colors.dash_color}-{colors.reset_color} " \
         f"{colors.tag_color}{('['+item[0]['tag']+']').ljust(max_len_tag_names+2)}{colors.reset_color} {colors.dash_color}-{colors.reset_color} " \
         # add 2 character because of `[` and `]` \
-        f"{item[0]['display_text']}" for idx, item in enumerate(sorted_choices, 1)]
+        f"{item[0]['display_text']}" for idx, item in enumerate(items, 1)]
 
     # Run fzf and get selected items
     try:
@@ -281,7 +270,7 @@ def run(
                 idx:int=int(idx_str,10)
                 # pick the original item to be searched again
                 # before passing the `fzf_match` object to the post handler
-                selected_item=sorted_choices[idx-1]
+                selected_item=items[idx-1]
             except:
                 logger.error(f"error: malformed selection: {selected_choice}")
                 continue
