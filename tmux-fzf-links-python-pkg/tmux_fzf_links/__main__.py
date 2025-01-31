@@ -168,6 +168,7 @@ def run(
 
     # Load user schemes
     user_schemes:list[SchemeEntry]
+    rm_default_schemes:list[str]
     if user_schemes_path:
         loaded_user_module = load_user_module(user_schemes_path)
         user_schemes = loaded_user_module[0]
@@ -175,6 +176,7 @@ def run(
         # print(rm_default_schemes)
     else:
         user_schemes = []
+        rm_default_schemes = []
     
     # Merge both schemes giving precedence to user schemes
 
