@@ -68,15 +68,6 @@ def trim_str(s:str) -> str:
     """Trim leading and trailing spaces from a string."""
     return s.strip()
 
-def remove_escape_sequences_and_normalize(text:str) -> str:
-    # Regular expression to match ANSI escape sequences
-    ansi_escape_pattern = r'\x1B\[[0-9;]*[mK]'
-    # Replace escape sequences with an empty string
-    unescaped = re.sub(ansi_escape_pattern, '', text)
-    # To deal with two different forms of handling diactrics, we normalize the string
-    normalized_unescaped = unicodedata.normalize("NFC", unescaped)
-    return normalized_unescaped
-
 def run(
         history_lines:str,
         editor_open_cmd:str,
@@ -126,7 +117,7 @@ def run(
             colors.configure_ls_colors_from_env()
 
     # Capture tmux content
-    capture_str:list[str]=['tmux', 'capture-pane', '-J', '-p', '-e', '-S', f'-{history_lines}']
+    capture_str:list[str]=['tmux', 'capture-pane', '-J', '-p', '-S', f'-{history_lines}']
 
     content = subprocess.check_output(
             capture_str,
@@ -134,9 +125,9 @@ def run(
             text=True,
         )
 
-    # Remove escape sequences
-    content=remove_escape_sequences_and_normalize(content)
-
+    # To deal with two different forms of handling diactrics, we normalize the string
+    content = unicodedata.normalize("NFC", content)
+    
     # Load user schemes
     user_schemes:list[SchemeEntry]
     if user_schemes_path:
