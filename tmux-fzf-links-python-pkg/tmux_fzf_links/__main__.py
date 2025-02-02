@@ -27,7 +27,7 @@ elif sys.version_info < (3, 12):  # For Python 3.8 and older
         return method
         
 from .opener import OpenerType, PreHandledMatch, PreHandler, open_link, SchemeEntry
-from .errors_types import CommandFailed, FailedChDir, FzfError, FzfUserInterrupt, MissingPostHandler, NoSuitableAppFound, PatternNotMatching, LsColorsNotConfigured
+from .errors_types import FailedTmuxPaneSize, CommandFailed, FailedChDir, FzfError, FzfUserInterrupt, MissingPostHandler, NoSuitableAppFound, PatternNotMatching, LsColorsNotConfigured
 from .default_schemes import default_schemes
 
 def load_user_module(file_path: str) -> tuple[list[SchemeEntry],list[str]]:
@@ -116,8 +116,33 @@ def run(
         else:
             colors.configure_ls_colors_from_env()
 
+    # Retrieve the current pane size
+    try:
+        pane_size_str:str = subprocess.check_output(
+            ('tmux', 'display', '-p', '#{pane_height},#{pane_width},#{scroll_position},',),
+            shell=False,
+            text=True,
+        )
+        pane_size_list = pane_size_str.split(',')
+        pane_height = int(pane_size_list[0])
+        pane_width = int(pane_size_list[1])
+
+        scroll_position:int
+        if pane_size_list[2]:
+            scroll_position = int(pane_size_list[2])
+        else:
+            scroll_position = 0
+        
+    except Exception as e:
+        raise FailedTmuxPaneSize(f"tmux pane size could not be determined: {e}")
+
     # Capture tmux content
-    capture_str:list[str]=['tmux', 'capture-pane', '-J', '-p', '-S', f'-{history_lines}']
+    capture_str:list[str]=[
+        'tmux', 'capture-pane',
+        '-J',
+        '-p',
+        '-S', f'{-scroll_position-configs.history_lines}',
+        '-E', f'{pane_height-scroll_position-1}']
 
     content = subprocess.check_output(
             capture_str,
@@ -228,7 +253,7 @@ def run(
     # Run fzf and get selected items
     try:
         # Run fzf and get selected items
-        fzf_result:FzfReturnType = run_fzf(fzf_display_options,numbered_choices,colors.enabled)
+        fzf_result:FzfReturnType = run_fzf(fzf_display_options,numbered_choices,colors.enabled,pane_height,pane_width)
     except FzfError as e:
         logger.error(f"error: unexpected error: {e}")
         sys.exit(1)
