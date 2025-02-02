@@ -147,7 +147,7 @@ def file_post_handler(match:re.Match[str]) -> list[str]:
     if resolved_path.is_file():
         # Open the file in binary mode and read a portion of it
         with resolved_path.open('rb') as file:
-            chunk = file.read(1024)  # Read the first 1024 bytes
+            chunk = file.read(4096)  # Read the first 1024 bytes
             if b'\0' not in chunk:      # Check for null bytes
                 is_binary = False
 

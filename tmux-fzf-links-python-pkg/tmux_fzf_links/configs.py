@@ -22,7 +22,7 @@ class ConfigurationManager:
         if self._initialized is False:
             self._initialize = True
 
-            self.history_limit:int = 0
+            self.history_lines:int = 0
             self.editor_open_cmd:str = ""
             self.browser_open_cmd:str = ""
             self.fzf_display_options:str = ""
@@ -54,10 +54,10 @@ class ConfigurationManager:
         ):
 
         try:
-            self.history_limit = int(history_lines)
+            self.history_lines = int(history_lines)
         except ValueError as e:
             self.logger.warning(f"Input parameter '@fzf-links-history-lines' must be a positive integer: {e}")
-            self.history_limit = 0 # default
+            self.history_lines = 0 # default
 
         self.editor_open_cmd = editor_open_cmd
         self.browser_open_cmd = browser_open_cmd

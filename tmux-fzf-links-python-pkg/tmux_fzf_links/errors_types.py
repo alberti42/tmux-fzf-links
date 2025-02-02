@@ -17,6 +17,9 @@ class FailedChDir(Exception):
 class FailedTmuxPaneSize(Exception):
     """Raise exception when tmux pane height cannot be determined"""
 
+class FailedParsingUserOption(Exception):
+    """Raise exception when it fails to parse user options"""
+
 class PatternNotMatching(Exception):
     """Raise exception when the pattern does not match a string already matched"""
 

@@ -9,7 +9,7 @@ import os
 import sys
 from typing import TypedDict
 
-from .errors_types import FailedTmuxPaneSize, FzfError, FzfUserInterrupt
+from .errors_types import FailedParsingUserOption, FzfError, FzfUserInterrupt
 from .configs import configs
 
 class FzfReturnType(TypedDict):
@@ -48,7 +48,7 @@ def parse_int_option(option_arg:str|None,ref_value:int|None) -> int|None:
     return int_value
 
 
-def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -> FzfReturnType:
+def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool, pane_height:int, pane_width:int) -> FzfReturnType:
     """Run fzf within a tmux popup with the given options and handle output via mkfifo."""
 
     # Parse user options into a list
@@ -63,23 +63,12 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
         "-E",  # Ensure the command runs interactively
     ]
 
-    # Retrieve the current pane size
-    try:
-        pane_size_str:str = subprocess.check_output(
-            ('tmux', 'display', '-p', '#{pane_height},#{pane_width}',),
-            shell=False,
-            text=True,
-        )
-        pane_height, pane_width = map(int, pane_size_str.split(','))
-    except Exception as e:
-        raise FailedTmuxPaneSize(f"tmux pane size could not be determined: {e}")
-
     # Set the x offset of the popup
     try:
         x_str = extract_option(cmd_user_args,'-x')
         x = parse_int_option(x_str,None)
     except (IndexError, ValueError):
-        raise FailedTmuxPaneSize("option '-x' is defined but its value is missing or invalid")
+        raise FailedParsingUserOption("option '-x' is defined but its value is missing or invalid")
     if x:
         tmux_popup_command.extend(["-x", f"{x}"])
 
@@ -88,7 +77,7 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
         y_str = extract_option(cmd_user_args,'-y')
         y = parse_int_option(y_str,None)
     except (IndexError, ValueError):
-        raise FailedTmuxPaneSize("option '-y' is defined but its value is missing or invalid")
+        raise FailedParsingUserOption("option '-y' is defined but its value is missing or invalid")
     if y:
         tmux_popup_command.extend(["-y", f"{y}"])
 
@@ -97,7 +86,7 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
         width_str = extract_option(cmd_user_args,'-w')
         width = parse_int_option(width_str,pane_width-HOR_BORDER)
     except (IndexError, ValueError):
-        raise FailedTmuxPaneSize("option '-w' is defined but its value is missing or invalid")
+        raise FailedParsingUserOption("option '-w' is defined but its value is missing or invalid")
     if width:
         # Force at least one char
         width = max(width,1)
@@ -111,7 +100,7 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
         height_str = extract_option(cmd_user_args,'-h')
         height = parse_int_option(height_str,pane_height-VER_BORDER)
     except (IndexError, ValueError):
-        raise FailedTmuxPaneSize("option '-h' is defined but its value is missing or invalid")
+        raise FailedParsingUserOption("option '-h' is defined but its value is missing or invalid")
     
     if height:
         # Force at least one line
@@ -126,7 +115,7 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool) -
         maxnum_str = extract_option(cmd_user_args,'--maxnum-displayed')
         maxnum = parse_int_option(maxnum_str,pane_height-VER_BORDER)
     except (IndexError, ValueError):
-        raise FailedTmuxPaneSize("option '--maxnum-displayed' is defined but its value is missing or invalid")
+        raise FailedParsingUserOption("option '--maxnum-displayed' is defined but its value is missing or invalid")
     if maxnum:
         height = min(height,maxnum)
 
