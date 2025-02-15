@@ -27,7 +27,7 @@ elif sys.version_info < (3, 12):  # For Python 3.8 and older
         return method
         
 from .opener import OpenerType, PreHandledMatch, PreHandler, open_link, SchemeEntry
-from .errors_types import FailedTmuxPaneSize, CommandFailed, FailedChDir, FzfError, FzfUserInterrupt, MissingPostHandler, NoSuitableAppFound, PatternNotMatching, LsColorsNotConfigured
+from .errors_types import FailedTmuxPaneSize, CommandFailed, FailedChDir, FileLoggingNotAllow, FzfError, FzfNotFound, FzfUserInterrupt, MissingPostHandler, NoSuitableAppFound, PatternNotMatching, LsColorsNotConfigured
 from .default_schemes import default_schemes
 
 def load_user_module(file_path: str) -> tuple[list[SchemeEntry],list[str]]:
@@ -72,6 +72,7 @@ def run(
         history_lines:str,
         editor_open_cmd:str,
         browser_open_cmd:str,
+        fzf_path:str,
         fzf_display_options:str,
         path_extension:str,
         loglevel_tmux:str,
@@ -89,6 +90,7 @@ def run(
     configs.initialize(history_lines,
         editor_open_cmd,
         browser_open_cmd,
+        fzf_path,
         fzf_display_options,
         path_extension,
         tmux_log_handler.level,
@@ -255,13 +257,10 @@ def run(
     # Run fzf and get selected items
     try:
         # Run fzf and get selected items
-        fzf_result:FzfReturnType = run_fzf(fzf_display_options,numbered_choices,colors.enabled,pane_height,pane_width)
-    except FzfError as e:
-        logger.error(f"error: unexpected error: {e}")
-        sys.exit(1)
+        fzf_result:FzfReturnType = run_fzf(configs.fzf_path,configs.fzf_display_options,numbered_choices,colors.enabled,pane_height,pane_width)
     except FzfUserInterrupt as e:
-        sys.exit(0)    
-
+        sys.exit(0)
+    
     if fzf_result["pressed_key"] == "META-ENTER":
         # When meta is pressed, the selection is copied to the clipboard
         is_meta_pressed = True
@@ -367,7 +366,7 @@ if __name__ == "__main__":
         run(*sys.argv[1:])
     except KeyboardInterrupt:
         logging.info("script interrupted")
-    except (FailedChDir,MissingPostHandler) as e:
+    except (FzfError,FzfNotFound,FileLoggingNotAllow,FailedChDir,MissingPostHandler,) as e:
         logging.error(f"{e}")
     except Exception as e:
         logging.error(f"unexpected runtime error: {e}")

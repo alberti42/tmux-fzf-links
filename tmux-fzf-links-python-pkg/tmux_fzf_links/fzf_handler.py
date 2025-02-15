@@ -9,7 +9,7 @@ import os
 import sys
 from typing import TypedDict
 
-from .errors_types import FailedParsingUserOption, FzfError, FzfUserInterrupt
+from .errors_types import FailedParsingUserOption, FzfError, FzfNotFound, FzfUserInterrupt
 from .configs import configs
 
 class FzfReturnType(TypedDict):
@@ -48,7 +48,7 @@ def parse_int_option(option_arg:str|None,ref_value:int|None) -> int|None:
     return int_value
 
 
-def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool, pane_height:int, pane_width:int) -> FzfReturnType:
+def run_fzf(fzf_path:str, fzf_display_options: str, choices: list[str], use_ls_colors: bool, pane_height:int, pane_width:int) -> FzfReturnType:
     """Run fzf within a tmux popup with the given options and handle output via mkfifo."""
 
     # Parse user options into a list
@@ -159,7 +159,7 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool, p
         # Prepare the fzf command to run inside the tmux popup
         fzf_command = (
             f"echo \"{chr(10).join(choices)}\" | "
-            f"fzf {' '.join(shlex.quote(arg) for arg in cmd_args)} "
+            f"{fzf_path} {' '.join(shlex.quote(arg) for arg in cmd_args)} "
             f"> {shlex.quote(stdout_pipe)} 2> {shlex.quote(stderr_pipe)}"
         )
 
@@ -189,7 +189,9 @@ def run_fzf(fzf_display_options: str, choices: list[str], use_ls_colors: bool, p
 
                 return {"pressed_key":pressed_key, "selection":results[1:]}
             elif tmux_process.returncode == 130:
-                raise FzfUserInterrupt("User canceled selection.")
+                raise FzfUserInterrupt("User canceled selection")
+            elif tmux_process.returncode == 127:
+                raise FzfNotFound(f"fzf command not found: {fzf_path}. Make sure fzf command is installed and reachable in the $PATH")
             else:
                 raise FzfError(f"fzf failed with exit code {tmux_process.returncode}: {stderr}")
 

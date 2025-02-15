@@ -141,6 +141,7 @@ Default options are already provided. However, you can customize all options by 
 # set-option -g @fzf-links-history-lines "0"
 set-option -g @fzf-links-editor-open-cmd "tmux new-window -n 'emacs' /usr/local/bin/emacs +%line '%file'"
 set-option -g @fzf-links-browser-open-cmd "/path/to/browser '%url'"
+# set-option -g @fzf-links-fzf-path "fzf"
 set-option -g @fzf-links-fzf-display-options "-w 100% --maxnum-displayed 20 --multi --track --no-preview"
 # set-option -g @fzf-links-path-extension "/usr/local/bin"
 # set-option -g @fzf-links-loglevel-tmux "WARNING"
@@ -178,7 +179,11 @@ Comment out the options you find useful and replace the placeholders with approp
 
 	 Default setting: `firefox '%url'`
 
-3. **`@fzf-links-fzf-display-options`**: This option specifies the arguments passed to `fzf`. Refer to the man page of [`fzf`](https://github.com/junegunn/fzf#options) for detailed documentation of the available arguments. In addition to the fzf arguments, this option can contain additional argument, which are specific to this plugin and documented below:
+3. **`@fzf-links-fzf-path`**: This option specifies the path to `fzf` command. It is only useful when `fzf` is not directly available in the $PATH.
+
+	 Default setting: `fzf`
+
+4. **`@fzf-links-fzf-display-options`**: This option specifies the arguments passed to `fzf`. Refer to the man page of [`fzf`](https://github.com/junegunn/fzf#options) for detailed documentation of the available arguments. In addition to the fzf arguments, this option can contain additional argument, which are specific to this plugin and documented below:
 
 	- **`-h`**: A custom option added by this plugin to set the height in number of lines of the tmux popup. The argument can be a positive integer or a percentage of tmux pane height. For example: `-h 30` means that a panel hosting up to 30 matches will be shown. The extra lines consumed by the border are not accounted for by this option.
 
@@ -194,11 +199,11 @@ Comment out the options you find useful and replace the placeholders with approp
 
    Default setting: `-w 100% --maxnum-displayed 15 --multi --track --no-preview`
 
-4. **`@fzf-links-history-lines`**: An integer number determining how many extra lines of history to consider.
+5. **`@fzf-links-history-lines`**: An integer number determining how many extra lines of history to consider.
 
 	 Default setting: `0`
 
-5. **`@fzf-links-ls-colors-filename`**: A file containing the content of $LS_COLORS. For example, you can save $LS_COLORS to a cached file using:
+6. **`@fzf-links-ls-colors-filename`**: A file containing the content of $LS_COLORS. For example, you can save $LS_COLORS to a cached file using:
 	 ```bash
 	 printenv LS_COLORS > cached_ls_colors.txt
 	 ```
@@ -207,21 +212,21 @@ Comment out the options you find useful and replace the placeholders with approp
 
 	Default setting: `""`
 
-6. **`@fzf-links-path-extension`**: This option is also not strictly necessary. It is only required if `fzf-tmux` or `tmux` binaries are not in the `$PATH` that was available when `tmux` started. The plugin only requires these two processes.
+7. **`@fzf-links-path-extension`**: This option is also not strictly necessary. It is only required if `fzf-tmux` or `tmux` binaries are not in the `$PATH` that was available when `tmux` started. The plugin only requires these two processes.
     
    Default setting: `""`
 
-7. **`@fzf-links-python`** and **`@fzf-links-python-path`**: These two options allow specifying the path to the Python interpreter and, if needed, to a Python `site-packages` directory, which is appended to `$PYTHONPATH`. The plugin does not rely on any external dependencies. However, you may want to import external modules installed in `site-packages` to extend the functionality of the plugin in `user_schemes`.
+8. **`@fzf-links-python`** and **`@fzf-links-python-path`**: These two options allow specifying the path to the Python interpreter and, if needed, to a Python `site-packages` directory, which is appended to `$PYTHONPATH`. The plugin does not rely on any external dependencies. However, you may want to import external modules installed in `site-packages` to extend the functionality of the plugin in `user_schemes`.
 
    Default setting: `""`
 
-8. 🔍 **Logging**: Control logging levels via these options:
+9. 🔍 **Logging**: Control logging levels via these options:
 
    - `@fzf-links-loglevel-tmux`: Adjust tmux log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`). Default: `WARNING`
    - `@fzf-links-loglevel-file`: Set log verbosity for file logs. Default: `DEBUG`
    - `@fzf-links-log-filename`: Specify the log file location. Omit this property or set it to an empty string to prevent logging to file. Default: `""`
 
-9. **`@fzf-links-hide-fzf_header`**: Prevent the header with instructions from appearing in fzf (`on` or `off`). Default: `off`.
+10. **`@fzf-links-hide-fzf_header`**: Prevent the header with instructions from appearing in fzf (`on` or `off`). Default: `off`.
 
 ### Tmux popup borders
 

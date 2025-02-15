@@ -25,6 +25,7 @@ class ConfigurationManager:
             self.history_lines:int = 0
             self.editor_open_cmd:str = ""
             self.browser_open_cmd:str = ""
+            self.fzf_path:str = "fzf"
             self.fzf_display_options:str = ""
             self.path_extension:str = ""
             self.loglevel_tmux:int = logging.WARNING
@@ -42,6 +43,7 @@ class ConfigurationManager:
             history_lines:str,
             editor_open_cmd:str,
             browser_open_cmd:str,
+            fzf_path:str,
             fzf_display_options:str,
             path_extension:str,
             loglevel_tmux:int,
@@ -61,6 +63,7 @@ class ConfigurationManager:
 
         self.editor_open_cmd = editor_open_cmd
         self.browser_open_cmd = browser_open_cmd
+        self.fzf_path = fzf_path
         self.fzf_display_options = fzf_display_options
         self.path_extension = path_extension
         self.loglevel_tmux = loglevel_tmux

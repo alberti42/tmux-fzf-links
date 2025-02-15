@@ -6,8 +6,9 @@
 
 from typing import override
 import logging
-import sys
 import subprocess
+
+from .errors_types import FileLoggingNotAllow
 
 class TmuxDisplayHandler(logging.Handler):
     @override
@@ -78,8 +79,7 @@ def set_up_logger(loglevel_tmux:str,loglevel_file:str,log_filename:str) -> tuple
             # Set level to zero to make sure that the error is displayed 
             tmux_handler.setLevel(0)
             # Log the error to tmux display and exit 
-            logger.error(f"error logging to logfile: {log_filename}")
-            sys.exit(1)
+            raise FileLoggingNotAllow(f"error: logging to file not allowed. Check you have permissions to write to logfile: {log_filename}")
 
     return (logger, tmux_handler, file_handler,)
 

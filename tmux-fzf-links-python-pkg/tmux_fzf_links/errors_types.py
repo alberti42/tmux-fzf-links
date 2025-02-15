@@ -32,10 +32,16 @@ class CommandFailed(Exception):
 class FzfUserInterrupt(Exception):
     """Raise exception when the user cancels fzf modal window"""
 
+class FzfNotFound(Exception):
+    """Raise exception when the command fzf is not found in the $PATH"""
+
 class FzfError(Exception):
     """Raise exception when fzf fails"""
 
 class LsColorsNotConfigured(Exception):
     """Raise exception when LS_COLORS could not be configured"""
+
+class FileLoggingNotAllow(Exception):
+    """Raise exception when logging to file is not allowed"""
 
 __all__ = ["FailedChDir", "FailedTmuxPaneSize", "PatternNotMatching", "NoSuitableAppFound", "CommandFailed", "FzfUserInterrupt", "FzfError", "FailedResolvePath"]
