@@ -22,9 +22,9 @@ The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmu
 - **Flexible Open Commands**: Configure your favorite editor, browser, or custom command to open links.
 - **Dynamic Logging**: Output logs to tmux messages and/or a file, with adjustable verbosity.
 - **Colorized Links**: Enhance readability with colorized links, using `$LS_COLORS` for files and directories.
-- **Clipboard support**: By pressing ctrl-c, the selected items are copied to tmux buffer and your system's clipboard, instead of executing the configured actions.
-- **Default file association support**: By pressing ctrl-d, the selected items are opened based on the system's default file association (i.e., using `open` in macOS and `xdg-open` in Linux).
-- **File manager support**: By pressing ctrl-r, the selected items are revealed using the system's default file manager (`open` in macOS and `xdg-open` in Linux).
+- **Clipboard support**: By pressing `ctrl`-`c`, the selected items are copied to tmux buffer and your system's clipboard, instead of executing the configured actions.
+- **Default file association support**: By pressing `ctrl`-`d`, the selected items are opened based on the system's default file association (i.e., using `open` in macOS and `xdg-open` in Linux).
+- **File manager support**: By pressing `ctrl`-`r`, the selected items are revealed using the system's default file manager (`open` in macOS and `xdg-open` in Linux).
 
 ### 🧩 Extensibility
 
