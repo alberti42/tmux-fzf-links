@@ -1,0 +1,3 @@
+{
+    "python.analysis.extraPaths": ["${workspaceFolder}/tmux-fzf-links-python-pkg"]
+}

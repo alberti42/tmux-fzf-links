@@ -11,7 +11,7 @@ def heuristic_find_file(file_path_str:str) -> Path | None:
     file_path = Path(expanduser(file_path_str))
     # Check if the file exists either as is or relative to the current directory
     if file_path.exists():
-        return file_path  # Return the absolute path
+        return file_path.resolve()  # Return the absolute resolved path
     else:
         # Drop the match if it corresponds to no file
         return None

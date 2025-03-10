@@ -7,14 +7,18 @@ import subprocess
 import tempfile
 import os
 import sys
-from typing import TypedDict
+from typing import TypedDict, Literal, TypeGuard, get_args
 
-from .errors_types import FailedParsingUserOption, FzfError, FzfNotFound, FzfUserInterrupt
+from .errors_types import FailedParsingUserOption, FzfError, FzfNotFound, FzfUserInterrupt, FzfWrongAction
 from .configs import configs
+
+ActionType = Literal["OPEN","SYSTEM_OPEN","REVEAL","COPY_TO_CLIPBOARD"]
+def is_valid_action_type(value: str) -> TypeGuard[ActionType]:
+    return value in get_args(ActionType)
 
 class FzfReturnType(TypedDict):
     selection:list[str]
-    pressed_key:str
+    action:ActionType
 
 def extract_option(cmd_user_args:list[str],option:str) -> str | None:
     # extract the user option
@@ -124,20 +128,23 @@ def run_fzf(fzf_path:str, fzf_display_options: str, choices: list[str], use_ls_c
     tmux_popup_command.extend(["-h", f"{fzf_height}"])
 
     # Base fzf arguments
-    fzf_args = ['--no-sort','--bind','alt-enter:print(META-ENTER)+accept',  '--bind', 'enter:print(ENTER)+accept']
+    fzf_args = ['--no-sort','--bind','ctrl-c:print(COPY_TO_CLIPBOARD)+accept', '--bind', 'ctrl-r:print(REVEAL)+accept', '--bind', 'ctrl-d:print(SYSTEM_OPEN)+accept', '--bind', 'enter:print(OPEN)+accept']
     if use_ls_colors:
         fzf_args.append('--ansi')
 
     if not configs.hide_fzf_header:
-        if sys.platform == "darwin":            
+        if sys.platform == "darwin":
             meta_key = "⌥" # option key
+            explorer = "Finder"
         elif sys.platform == "win32":
             meta_key = "alt" # symbol: ⎇
+            explorer = "system's file manager"
         else:
             # historically the alt key was called meta in unix/linux systems
             meta_key = "meta"  # symbol: ◆ 
+            explorer = "explorer"
 
-        fzf_args.extend(['--header',f"Press {meta_key}+↵ to copy selection to tmux buffer"])
+        fzf_args.extend(['--header',f"↵ to open with configured opener, ^-d to open with system's default opener, ^+r to reveal in {explorer}, ^+c to copy to tmux buffer"])
 
     # Combine fzf arguments, giving user options higher priority
     cmd_args = fzf_args + cmd_user_args
@@ -184,10 +191,12 @@ def run_fzf(fzf_path:str, fzf_display_options: str, choices: list[str], use_ls_c
                 # Split the lines from fzf
                 results = stdout.splitlines()
 
-                # The first line is special and tells us what key was pressed by the user
-                pressed_key = results[0]
+                # The first line is special and tells us what key was pressed / action was chosen by the user
+                selected_action = results[0]
+                if not is_valid_action_type(selected_action):
+                    raise FzfWrongAction(f"Action selected with fzf is not supported: {selected_action}")
 
-                return {"pressed_key":pressed_key, "selection":results[1:]}
+                return {"action":selected_action, "selection":results[1:]}
             elif tmux_process.returncode == 130:
                 raise FzfUserInterrupt("User canceled selection")
             elif tmux_process.returncode == 127:

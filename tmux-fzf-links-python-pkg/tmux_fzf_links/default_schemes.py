@@ -7,12 +7,12 @@
 import re
 import sys
 import shlex
-from .export import OpenerType, SchemeEntry, PreHandledMatch, colors, heuristic_find_file, configs
+from .export import OpenerType, SchemeEntry, PreHandledMatch, PostHandledMatch, colors, heuristic_find_file, configs
 from .errors_types import NotSupportedPlatform, FailedResolvePath
 
 # >>> GIT SCHEME >>>
 
-def git_post_handler(match:re.Match[str]) -> dict[str,str]:
+def git_post_handler(match:re.Match[str]) -> PostHandledMatch:
     server:str = match.group("server")
     repo:str = match.group("repo")
     
@@ -56,7 +56,7 @@ def code_error_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
 
     return {"display_text": display_text, "tag": tag}
 
-def code_error_post_handler(match:re.Match[str]) -> dict[str,str]:
+def code_error_post_handler(match:re.Match[str]) -> PostHandledMatch:
     # Handle error messages appearing on the command line
     # and create an appropriate link to open the affected file 
 
@@ -110,12 +110,16 @@ def file_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
     # Drop matches containing only `.` such as current and previous folder
     if all(char == '.' for char in file_path):
         return None
+    
+    # Drop matches containing only `~` for the home directory
+    if file_path == '~':
+        return None
 
     # Return the fully resolved path
     resolved_path = heuristic_find_file(file_path)
     
     if resolved_path == None:
-        return None
+        return None 
     
     tag="dir" if resolved_path.is_dir() else "file"
     if colors.enabled:
@@ -127,8 +131,8 @@ def file_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
         "display_text":display_text,
         "tag": tag
         }
-    
-def file_post_handler(match:re.Match[str]) -> list[str]:
+
+def file_post_handler(match:re.Match[str]) -> PostHandledMatch:
 
     # Get the matched file path
     file_path:str = match.group("link")
@@ -141,32 +145,31 @@ def file_post_handler(match:re.Match[str]) -> list[str]:
     if resolved_path is None:
         raise FailedResolvePath(f"could not resolve the path of: {file_path}")
 
-    resolved_path_str = str(resolved_path.resolve())
+    resolved_path_str = str(resolved_path)
 
-    is_binary=True # we assume a binary file as the fallback case
     if resolved_path.is_file():
-        # Open the file in binary mode and read a portion of it
+        # If file, check whether it is a binary file. Open the file in binary mode and read a portion of it:
         with resolved_path.open('rb') as file:
             chunk = file.read(4096)  # Read the first 1024 bytes
-            if b'\0' not in chunk:      # Check for null bytes
+            if b'\0' in chunk:      # Check for null bytes
+                is_binary = True
+            else:
                 is_binary = False
 
-    if is_binary:
-        if sys.platform == "darwin":
-            return ['open','-R', resolved_path_str]
-        elif sys.platform == "linux":
-            return ['xdg-open', resolved_path_str]
-        elif sys.platform == "win32":
-            return ['explorer', resolved_path_str]
+        if not is_binary and configs.editor_open_cmd:
+            # If not binary, open the the file with configured editor
+            args = shlex.split(configs.editor_open_cmd.replace(f"%file",resolved_path_str).replace(f"%line",line))
+            return {'cmd': args[0], 'args':args[1:], 'file': resolved_path_str}
         else:
-            raise NotSupportedPlatform(f"platform {sys.platform} not supported")
+            configs.logger.warning(f'warning: binary files cannot be opened with the editor: {resolved_path_str}')
+            return None
     else:
-        args = shlex.split(configs.editor_open_cmd.replace(f"%file",resolved_path_str).replace(f"%line",line))
-        return args
-
+         # If directory, then cd into the selected directory
+        return {'cmd': 'tmux', 'args': ['send-keys', f'cd "{resolved_path_str}"', 'C-m'], 'file':resolved_path_str}
+    
 file_scheme:SchemeEntry = {
-        "tags": ("file","dir"),
-        "opener": OpenerType.CUSTOM,
+        "tags": ("file","dir",),
+        "opener": OpenerType.CUSTOM_OPEN,
         "post_handler": file_post_handler,
         "pre_handler": file_pre_handler,
         "regex": [

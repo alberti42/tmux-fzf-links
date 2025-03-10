@@ -29,6 +29,12 @@ class NoSuitableAppFound(Exception):
 class CommandFailed(Exception):
     """Raise exception when the executed app exits with a nonzero return code"""
 
+class NoEditorConfigured(Exception):
+    """Raise exception when the file cannot be opened because no editor is configured"""
+
+class NoBrowserConfigured(Exception):
+    """Raise exception when the url cannot be opened because no browser is configured"""
+
 class FzfUserInterrupt(Exception):
     """Raise exception when the user cancels fzf modal window"""
 
@@ -37,6 +43,9 @@ class FzfNotFound(Exception):
 
 class FzfError(Exception):
     """Raise exception when fzf fails"""
+
+class FzfWrongAction(Exception):
+    """Raise exception when fzf returns an action that is not supported"""
 
 class LsColorsNotConfigured(Exception):
     """Raise exception when LS_COLORS could not be configured"""

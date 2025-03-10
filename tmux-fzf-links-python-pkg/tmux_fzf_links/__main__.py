@@ -26,8 +26,8 @@ elif sys.version_info < (3, 12):  # For Python 3.8 and older
     def override(method):
         return method
         
-from .opener import OpenerType, PreHandledMatch, PreHandler, open_link, SchemeEntry
-from .errors_types import FailedTmuxPaneSize, CommandFailed, FailedChDir, FileLoggingNotAllow, FzfError, FzfNotFound, FzfUserInterrupt, MissingPostHandler, NoSuitableAppFound, PatternNotMatching, LsColorsNotConfigured
+from .opener import OpenerType, PreHandledMatch, PostHandledMatch, open_link, SchemeEntry
+from .errors_types import FailedTmuxPaneSize, CommandFailed, FailedChDir, FileLoggingNotAllow, FzfError, FzfNotFound, FzfUserInterrupt, MissingPostHandler, NoBrowserConfigured, NoEditorConfigured, NoSuitableAppFound, PatternNotMatching, LsColorsNotConfigured
 from .default_schemes import default_schemes
 
 def load_user_module(file_path: str) -> tuple[list[SchemeEntry],list[str]]:
@@ -161,6 +161,10 @@ def run(
     if user_schemes_path:
         loaded_user_module = load_user_module(user_schemes_path)
         user_schemes = loaded_user_module[0]
+        for user_scheme in user_schemes:
+            # Translation for backward compatibility
+            if user_scheme["opener"] == OpenerType.CUSTOM:
+                user_scheme["opener"] = OpenerType.CUSTOM_OPEN
         rm_default_schemes = loaded_user_module[1]
         # print(rm_default_schemes)
     else:
@@ -260,14 +264,9 @@ def run(
         fzf_result:FzfReturnType = run_fzf(configs.fzf_path,configs.fzf_display_options,numbered_choices,colors.enabled,pane_height,pane_width)
     except FzfUserInterrupt as e:
         sys.exit(0)
-    
-    if fzf_result["pressed_key"] == "META-ENTER":
-        # When meta is pressed, the selection is copied to the clipboard
-        is_meta_pressed = True
-        # We disable colors
-        colors.enable_colors(False)
-    else:
-        is_meta_pressed = False
+
+    # Disable colors; this is relevant when producing the pre_handled_match
+    colors.enable_colors(False)
 
     # Regular expression to parse the selected item from the fzf options
     # Each line is in the format {four-digit number, two spaces <scheme type>, two spaces, <link>
@@ -275,13 +274,15 @@ def run(
 
     # Array of strings to be copied to clipboard
     clipboard:list[str] = []
-
+    
     # Process selected items
     for selected_choice in fzf_result["selection"]:
         fzf_match = re.match(selected_item_pattern, selected_choice)
         if fzf_match:
             idx_str:str = fzf_match.group("idx")
             scheme_type:str = fzf_match.group("type")
+            # displayed text created by the prehandler
+            pre_handled_match_text:str = fzf_match.group("link")
             
             try:
                 idx:int=int(idx_str,10)
@@ -302,30 +303,21 @@ def run(
 
             selected_match=selected_item[3]
 
-            if is_meta_pressed:
-                # If META (i.e. alt / option key) is pressed, then we copy to clipboard
-                # the result of the pre handler.
-                if scheme['pre_handler']:
-                    pre_handled_match = scheme['pre_handler'](selected_match)
-                else:
-                    # fallback case when no pre_handler is provided for the scheme
-                    pre_handled_match = {
-                        "display_text": entire_match,
-                        "tag": scheme["tags"][0]
-                    }
-
-                if pre_handled_match:
-                    clipboard.append(pre_handled_match["display_text"])
-                
+            if fzf_result["action"] == "COPY_TO_CLIPBOARD":
+                # Copy to clipboard the result of the pre handler.
+                clipboard.append(pre_handled_match_text)
                 # Skip the rest
                 continue
-      
+                
             # Get the post_handler, which applies after the user selection
             post_handler = scheme.get("post_handler",None)
-
+            
             # Process the rematch with the post handler
+            post_handled_link: PostHandledMatch
             if post_handler:
-                post_handled_link = post_handler(selected_match)    
+                post_handled_link = post_handler(selected_match)
+                if post_handled_link is None:
+                    continue
             else:
                 if scheme["opener"] == OpenerType.EDITOR:
                     post_handled_link = {'file':selected_match.group(0)}
@@ -333,9 +325,30 @@ def run(
                     post_handled_link = {'url':selected_match.group(0)}
                 else:
                     raise MissingPostHandler(f"scheme with tags {scheme['tags']} configured as custom opener but missing post handler")
+            
+            match fzf_result["action"]:
+                case "REVEAL":
+                    if "file" in post_handled_link:
+                        # When the match yields file
+                        scheme["opener"] = OpenerType.REVEAL;
+                        post_handled_link = {'file': post_handled_link['file']}
+                    else:
+                        # Display warning and the skip this selected item
+                        logger.warning(f'warning: cannot reveal selected choice in system file manager: {selected_match.group(0)}')
+                        continue                        
+                case "SYSTEM_OPEN":
+                    if "file" in post_handled_link:
+                        # When the match yields file
+                        scheme["opener"] = OpenerType.SYSTEM_OPEN;
+                        post_handled_link = {'file': post_handled_link['file']}
+                    else:
+                        # Display warning and the skip this selected item
+                        logger.warning(f'warning: cannot open selected choice with system\'s default opener: {selected_match.group(0)}')
+                        continue                        
+            
             try:
                 open_link(post_handled_link,editor_open_cmd,browser_open_cmd,schemes[index_scheme]["opener"])
-            except (NoSuitableAppFound, PatternNotMatching, CommandFailed) as e:
+            except (NoSuitableAppFound, PatternNotMatching, CommandFailed, NoEditorConfigured, NoBrowserConfigured) as e:
                 logger.error(f"error: {e}")
                 continue
             except Exception as e:
@@ -345,15 +358,15 @@ def run(
             logger.error(f"error: malformed selection: {selected_choice}")
             continue
 
-    if clipboard != []:
-        sss:str = "s" if len(clipboard)>1 else ""
+    if clipboard != []:    
+        plural:str = "s" if len(clipboard)>1 else ""
         clipped_text = "\n".join(clipboard)
-        tmux_buffer_action:list[str] = [
-                'tmux', 'set-buffer', '-w', f'{clipped_text}', ';',
-                'display-message', f"copied selection{sss} to tmux buffer"
-            ]
+        tmux_buffer_action:PostHandledMatch = {
+            'cmd': 'tmux',
+            'args': ['set-buffer', '-w', f'{clipped_text}', ';', 'display-message', f"copied selection{plural} to tmux buffer"]
+        }
         try:
-            open_link(tmux_buffer_action,editor_open_cmd,browser_open_cmd,OpenerType.CUSTOM)
+            open_link(tmux_buffer_action,editor_open_cmd,browser_open_cmd,OpenerType.CUSTOM_OPEN)
         except (NoSuitableAppFound, PatternNotMatching, CommandFailed) as e:
             logger.error(f"error: {e}")
             return

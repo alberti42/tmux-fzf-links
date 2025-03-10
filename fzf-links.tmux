@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env bash -f
 
 # Andrea Alberti, 2024
 

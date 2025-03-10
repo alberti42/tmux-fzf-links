@@ -7,23 +7,58 @@ import re
 import os
 import subprocess
 from enum import Enum
-from typing import Callable,TypedDict
+import sys
+from typing import Callable, TypedDict, TypeGuard, NotRequired
 import shlex
 
-from .errors_types import CommandFailed, NoSuitableAppFound
+from .errors_types import CommandFailed, NoBrowserConfigured, NoEditorConfigured, NoSuitableAppFound
 
 class OpenerType(Enum):
     EDITOR = 0
     BROWSER = 1
     # when set to custom, the post_handler is responsible to
     # provide the opener as first element of the list
-    CUSTOM = 2 
+    CUSTOM = 99  # for backward compatibility; equivalent to CUSTOM_OPEN
+    CUSTOM_OPEN = 2
+    SYSTEM_OPEN = 3
+    REVEAL = 4
 
 class PreHandledMatch(TypedDict):
     display_text: str
     tag: str
 
-PostHandledMatch = dict[str, str] | list[str]
+class PostHandledMatchFileType(TypedDict):
+    file: str
+    line: NotRequired[str]
+
+class PostHandledMatchCustomType(TypedDict):
+    cmd: str # command to be executed
+    args: list[str] # list of arguments provided to the command cmd
+    file: NotRequired[str] # if provided, it indicates that a file is associated with the match and can be revealed or opened with system's default file manager
+
+class PostHandledMatchUrlType(TypedDict): # keys are optional
+    url: str
+
+PostHandledMatchDefinite = PostHandledMatchFileType | PostHandledMatchUrlType | PostHandledMatchCustomType
+PostHandledMatch = PostHandledMatchDefinite | None
+
+def isValidPostHandledMatchUrlType(value:PostHandledMatchDefinite) -> TypeGuard[PostHandledMatchUrlType]:
+    if 'url' in value:
+        return True
+    else:
+        return False
+
+def isValidPostHandledMatchFileType(value:PostHandledMatchDefinite) -> TypeGuard[PostHandledMatchFileType]:
+    if 'file' in value and 'cmd' not in value:
+        return True
+    else:
+        return False
+
+def isValidPostHandledMatchCustomType(value:PostHandledMatchDefinite) -> TypeGuard[PostHandledMatchCustomType]:
+    if 'cmd' in value and 'args' in value:
+        return True
+    else:
+        return False
 
 # Pre and post handler types
 PreHandler = Callable[[re.Match[str]], PreHandledMatch | None] | None
@@ -37,50 +72,127 @@ class SchemeEntry(TypedDict):
     post_handler: PostHandler  # A function that takes a string and returns a string
     regex: list[re.Pattern[str]]            # A compiled regex pattern
 
-def open_link(post_handled_match:PostHandledMatch, editor_open_cmd:str, browser_open_cmd:str, opener:OpenerType):
+xdg_open_util: str | None = None
+def get_xdg_open_util() -> str | None:
+    # Find xdg_open for Linux; if nothing is found, None is returned
+    global xdg_open_util
+    if xdg_open_util is None:
+        xdg_open_util = shutil.which("xdg-open")
+    return xdg_open_util
+
+system_open_util: str | None = None
+def get_system_open_util() -> str | None:
+    global system_open_util
+    if system_open_util is None:
+        if sys.platform == "darwin":
+            cmd = shutil.which("open")
+            if cmd:
+                system_open_util = f"{cmd} '%file'"
+        elif sys.platform == "linux":
+            cmd = shutil.which("xdg-open")
+            if cmd:
+                system_open_util = f"{cmd} '%file'"
+        elif sys.platform == "win32":
+            cmd = shutil.which("explorer")
+            if cmd:
+                system_open_util = f"{cmd} '%file'"
+        else:
+            raise NotSupportedPlatform(f"platform {sys.platform} not supported")
+    return system_open_util
+
+reveal_util: str | None = None
+def get_reveal_util() -> str | None:
+    # Find open for macOS; if nothing is found, None is returned
+    global reveal_util
+    if reveal_util is None:
+        if sys.platform == "darwin":
+            cmd = shutil.which("open")
+            if cmd:
+                reveal_util = f"{cmd} -R '%file'"
+        elif sys.platform == "linux":
+            cmd = shutil.which("dbus-send")
+            if cmd:
+                reveal_util = f'{cmd} --session --dest=org.freedesktop.FileManager1 --type=method_call /org/freedesktop/FileManager1 org.freedesktop.FileManager1.ShowItems array:string:"file://%file" string:""'
+        elif sys.platform == "win32":
+            cmd = shutil.which("explorer")
+            if cmd:
+                reveal_util = f"{cmd} '%file'"
+        else:
+            raise NotSupportedPlatform(f"platform {sys.platform} not supported")
+    return reveal_util
+
+def cmd_from_template(template:str,post_handled_match:PostHandledMatchUrlType | PostHandledMatchFileType ):
+    # The keys in the dictionary represent the placeholders
+    # to be replaced in the template with the corresponding values
+    cmd_str = template
+    for key,value in post_handled_match.items():
+        if isinstance(value,str):
+            cmd_str = cmd_str.replace(f"%{key}",value)
+
+    return shlex.split(cmd_str)
+
+def open_link(post_handled_match:PostHandledMatchDefinite, editor_open_cmd:str, browser_open_cmd:str, opener:OpenerType):
     """Open a link using the appropriate handler."""
 
     # contains the arguments for subprocess.Popen, including the process to start
-    args:list[str]
+    cmd_plus_args:list[str]
 
-    if opener == OpenerType.CUSTOM:
-        if isinstance(post_handled_match,dict):
-            raise RuntimeError("'post_handled_match' is of type 'dict' whereas a type 'list' was expected")     
-        args = post_handled_match
+    if opener == OpenerType.CUSTOM_OPEN:
+        if isValidPostHandledMatchCustomType(post_handled_match):
+            cmd_plus_args = [post_handled_match["cmd"]] + post_handled_match["args"]
+        else:
+            raise RuntimeError("'post_handled_match' is of type 'dict' whereas a type 'list' was expected")
     else:
-        if isinstance(post_handled_match,list):
-            raise RuntimeError("'post_handled_match' is of type 'list' whereas a type 'dict' was expected")     
-
         # template with the command to be executed
         template:str
 
-        if opener==OpenerType.EDITOR and editor_open_cmd:
-            template = editor_open_cmd
-        elif opener==OpenerType.BROWSER and browser_open_cmd:
-            template = browser_open_cmd
-        elif shutil.which("xdg-open"):
-            template = "xdg-open '%%file'"
-        elif shutil.which("open"):
-            template = "open '%%file'"
-        elif opener==OpenerType.EDITOR and "EDITOR" in os.environ:
-            template = f"{os.environ['EDITOR']} '%%file'"
-        elif opener==OpenerType.BROWSER and "BROWSER" in os.environ:
-            template = f"{os.environ['BROWSER']} '%%file'"
-        else:
-            raise NoSuitableAppFound("no suitable app was found to open the link")
-
-        # The keys in the dictionary represent the placeholders
-        # to be replaced in the template with the corresponding values
-        cmd = template
-        for key,value in post_handled_match.items():
-            cmd = cmd.replace(f"%{key}",value)
-
-        args = shlex.split(cmd)
+        match opener:
+            case OpenerType.EDITOR:
+                if isValidPostHandledMatchFileType(post_handled_match):
+                    if editor_open_cmd:
+                        template = editor_open_cmd
+                    else:
+                        default_editor = os.environ.get('EDITOR',None)
+                        default_editor = 'open'
+                        if not default_editor:
+                            raise NoEditorConfigured("no editor command is configured")
+                        template = f"{default_editor} '%file'"
+                    cmd_plus_args = cmd_from_template(template,post_handled_match)
+                else:
+                    raise RuntimeError("'post_handled_match' is not compatible with type: PostHandledMatchFileType")
+            case OpenerType.BROWSER:
+                if isValidPostHandledMatchUrlType(post_handled_match):
+                    if browser_open_cmd:
+                        template = browser_open_cmd
+                    else:
+                        default_browser = os.environ.get('BROWSER',None)
+                        if not default_browser:
+                            raise NoBrowserConfigured("no browser command is configured")
+                        template = f"{default_browser} '%url'"
+                    cmd_plus_args = cmd_from_template(template,post_handled_match)
+                else:
+                    raise RuntimeError("'post_handled_match' is not compatible with type: PostHandledMatchFileType")
+            case OpenerType.REVEAL:
+                if 'file' in post_handled_match:
+                    if (util_cmd := get_reveal_util()):
+                        template = util_cmd
+                        cmd_plus_args = shlex.split(template.replace(f'%file',post_handled_match['file']))
+                else:
+                    raise RuntimeError("'post_handled_match' is not compatible with type: PostHandledMatchFileType")
+            case OpenerType.SYSTEM_OPEN:
+                if 'file' in post_handled_match:
+                    if (util_cmd := get_system_open_util()):
+                        template = util_cmd
+                        cmd_plus_args = shlex.split(template.replace(f'%file',post_handled_match['file']))
+                else:
+                    raise RuntimeError("'post_handled_match' is not compatible with type: PostHandledMatchFileType")
+            case _:
+                raise NoSuitableAppFound("no suitable app was found to open the link")
 
     try:
         # Run the command and capture stdout and stderr
         proc = subprocess.Popen(
-            args,
+            cmd_plus_args,
             shell=False,  # Execute in the user's default shell
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -95,7 +207,7 @@ def open_link(post_handled_match:PostHandledMatch, editor_open_cmd:str, browser_
             raise CommandFailed(f"return code {proc.returncode}: {stderr.decode('utf-8')}")
 
     except FileNotFoundError as e:
-        raise CommandFailed(f'could not find "{args[0]}" in the path')
+        raise CommandFailed(f'could not find "{cmd_plus_args[0]}" in the path')
 
     except Exception as e:
-        raise CommandFailed(f'failed to execute command "{cmd}"')
+        raise CommandFailed(f'failed to execute command "{" ".join(cmd_plus_args)}"')

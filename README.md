@@ -22,7 +22,9 @@ The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmu
 - **Flexible Open Commands**: Configure your favorite editor, browser, or custom command to open links.
 - **Dynamic Logging**: Output logs to tmux messages and/or a file, with adjustable verbosity.
 - **Colorized Links**: Enhance readability with colorized links, using `$LS_COLORS` for files and directories.
-- **Clipboard support**: By pressing META-ENTER, the selected items are copied to tmux buffer and your system's clipboard, instead of executing the configured actions.
+- **Clipboard support**: By pressing ctrl-c, the selected items are copied to tmux buffer and your system's clipboard, instead of executing the configured actions.
+- **Default file association support**: By pressing ctrl-d, the selected items are opened based on the system's default file association (i.e., using `open` in macOS and `xdg-open` in Linux).
+- **File manager support**: By pressing ctrl-r, the selected items are revealed using the system's default file manager (`open` in macOS and `xdg-open` in Linux).
 
 ### 🧩 Extensibility
 
@@ -283,7 +285,7 @@ default_schemes = [
     },
     {
         "tags": ("file", "dir"),
-        "opener": OpenerType.CUSTOM,
+        "opener": OpenerType.CUSTOM_OPEN,
         "regex": [
             re.compile(r"(?P<link>^[^<>:\"\\|?*\x00-\x1F]+)(\:(?P<line>\d+))?",re.MULTILINE), # filename with spaces, starting at the line beginning
             re.compile(r"\'(?P<link>[^:\'\"|?*\x00-\x1F]+)\'(\:(?P<line>\d+))?"), # filename with spaces, quoted
@@ -341,23 +343,26 @@ Dynamic tag assignment allows `pre_handler` to adjust tags based on the match co
 
 #### Customizing Post-Handlers
 
-The `post_handler` function determines the command to execute for the selected link. Depending on the `opener`, it can return:
+The `post_handler` function returns a dictionary containing instructions on what to do with the selected link. Depending on how the `opener` is configured, the dictionary must specify different information:
 
-- **A dictionary (`dict[str, str]`)**: When the `opener` is set to `OpenerType.EDITOR` or `OpenerType.BROWSER`, the dictionary must include fields required by the specific opener:
-  - For `OpenerType.EDITOR`, the dictionary must include:
-    - **`file`**: The fully-resolved file path.
-    - **`line`** (optional): The line number to open in the editor.
-  - For `OpenerType.BROWSER`, the dictionary must include:
-    - **`url`**: The URL to open in the browser.
-
-- **A list of strings (`list[str]`)**: When the `opener` is set to `OpenerType.CUSTOM`, the list contains the arguments directly passed to `subprocess.Popen` for execution. The first element of the list must specify the path to the custom opener executable.
+- For `OpenerType.EDITOR`, the dictionary must include:
+  - **`file`**: The fully-resolved file path.
+  - **`line`** (optional): The line number to open in the editor.
+- For `OpenerType.BROWSER`, the dictionary must include:
+  - **`url`**: The URL to open in the browser.
+- For `OpenerType.CUSTOM_OPEN`, the dictionary contains:
+  - **`cmd`**: The path to the custom opener executable.
+  - **`args`**: The arguments in the form of a list to be provided to the specified command.
+  - **`file`**: An optional field specifying the path to the file whenever a file can be associated with the selected choice. This is used to open the file with the system's default file association and to reveal the file in the system's default file manager.
+- For `OpenerType.REVEAL` and `OpenerType.SYSTEM_OPEN`, the dictionary must include:
+  - **`file`**: The fully-resolved file path. The file is either revealed in the system's default file manager or opened with the system's default file association for the two openers, respectively.
 
 ##### Example: Handling URLs
 
 For a browser opener (`OpenerType.BROWSER`), the `post_handler` can return a dictionary with the `url` field:
 
 ```python
-def ip_post_handler(match: re.Match[str]) -> dict[str, str]:
+def ip_post_handler(match: re.Match[str]) -> PostHandledMatch:
     ip_addr_str = match.group("ip")
     return {"url": f"https://{ip_addr_str}"}
 ```
@@ -382,7 +387,7 @@ ip_scheme: SchemeEntry = {
 For an editor opener (`OpenerType.EDITOR`), the `post_handler` can return a dictionary with the `file` and `line` fields:
 
 ```python
-def code_error_post_handler(match: re.Match[str]) -> dict[str, str]:
+def code_error_post_handler(match: re.Match[str]) -> PostHandledMatch:
     file = match.group("file")
     line = match.group("line")
 
@@ -407,7 +412,7 @@ code_error_scheme: SchemeEntry = {
 
 ##### Example: Handling Files and Directories
 
-For a custom opener (`OpenerType.CUSTOM`), the `post_handler` returns a list of arguments directly passed to `subprocess.Popen`. The first element specifies the custom opener executable:
+For a custom opener (`OpenerType.CUSTOM_OPEN`), the `post_handler` returns a list of arguments directly passed to `subprocess.Popen`. The first element specifies the custom opener executable:
 
 ```python
 def file_post_handler(match: re.Match[str]) -> list[str]:
@@ -439,7 +444,7 @@ The corresponding scheme:
 ```python
 file_scheme: SchemeEntry = {
     "tags": ("file", "dir"),
-    "opener": OpenerType.CUSTOM,
+    "opener": OpenerType.CUSTOM_OPEN,
     "regex": [
             re.compile(r"(?P<link>^[^<>:\"\\|?*\x00-\x1F]+)(\:(?P<line>\d+))?",re.MULTILINE), # filename with spaces, starting at the line beginning
             re.compile(r"\'(?P<link>[^:\'\"|?*\x00-\x1F]+)\'(\:(?P<line>\d+))?"), # filename with spaces, quoted
