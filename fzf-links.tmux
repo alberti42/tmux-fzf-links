@@ -1,4 +1,6 @@
-#!/usr/bin/env bash -f
+#!/usr/bin/env bash
+
+set -f
 
 # Andrea Alberti, 2024
 
