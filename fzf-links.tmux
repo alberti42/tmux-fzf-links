@@ -1,4 +1,4 @@
-#!/usr/bin/env bash -f
+#!/usr/bin/env -S bash --noprofile --norc
 
 # Andrea Alberti, 2024
 
