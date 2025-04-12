@@ -4,7 +4,14 @@
 #   Author: (c) 2024 Andrea Alberti
 #===============================================================================
 
-from typing import override
+import sys
+if sys.version_info >= (3, 12):  # For Python 3.12 and newer
+    from typing import override
+elif sys.version_info < (3, 12):  # For Python 3.8 and older
+    # Fallback for Python < 3.12
+    def override(method):
+        return method
+
 import logging
 import subprocess
 
