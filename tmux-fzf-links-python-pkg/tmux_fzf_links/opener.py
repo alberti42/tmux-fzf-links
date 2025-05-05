@@ -8,7 +8,11 @@ import os
 import subprocess
 from enum import Enum
 import sys
-from typing import Callable, TypedDict, TypeGuard, NotRequired
+from typing import Callable, TypedDict, TypeGuard
+if sys.version_info >= (3, 11):  # For Python 3.11 and newer
+    from typing import NotRequired
+elif sys.version_info < (3, 11):  # For Python 3.10
+    pass
 import shlex
 
 from .errors_types import CommandFailed, NoBrowserConfigured, NoEditorConfigured, NoSuitableAppFound
@@ -27,14 +31,23 @@ class PreHandledMatch(TypedDict):
     display_text: str
     tag: str
 
-class PostHandledMatchFileType(TypedDict):
-    file: str
-    line: NotRequired[str]
+if sys.version_info >= (3, 11):
+    class PostHandledMatchFileType(TypedDict):
+        file: str
+        line: NotRequired[str]
 
-class PostHandledMatchCustomType(TypedDict):
-    cmd: str # command to be executed
-    args: list[str] # list of arguments provided to the command cmd
-    file: NotRequired[str] # if provided, it indicates that a file is associated with the match and can be revealed or opened with system's default file manager
+    class PostHandledMatchCustomType(TypedDict):
+        cmd: str # command to be executed
+        args: list[str] # list of arguments provided to the command cmd
+        file: NotRequired[str] # if provided, it indicates that a file is associated with the match and can be revealed or opened with system's default file manager
+else:
+    class PostHandledMatchFileType(TypedDict):
+        file: str
+        # In Python < 3.11, we can't mark 'line' as NotRequired, so it's omitted
+    
+    class PostHandledMatchCustomType(TypedDict):
+        cmd: str # command to be executed
+        args: list[str] # list of arguments provided to the command cmd
 
 class PostHandledMatchUrlType(TypedDict): # keys are optional
     url: str
