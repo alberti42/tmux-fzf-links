@@ -131,6 +131,54 @@ def cmd_from_template(template:str,post_handled_match:PostHandledMatchUrlType | 
 
     return shlex.split(cmd_str)
 
+def spawn_daemon(cmd_plus_args: list[str]):
+    """
+    - On Unix, uses double-fork daemonization; see double-fork magic, see Stevens' "Advanced Programming in the UNIX Environment" for details (ISBN 0201563177)
+    - On Windows, uses DETACHED_PROCESS and CREATE_NEW_PROCESS_GROUP.
+    """
+    if sys.platform == "win32":
+        DETACHED_PROCESS = subprocess.DETACHED_PROCESS
+        CREATE_NEW_PROCESS_GROUP = subprocess.CREATE_NEW_PROCESS_GROUP
+
+        try:
+            subprocess.Popen(
+                cmd_plus_args,
+                creationflags=DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except OSError as e:
+            raise CommandFailed(f"Failed to launch detached process: {e}")
+        return
+
+    # UNIX: double-fork for full daemonization
+    try:
+        pid = os.fork()
+        if pid > 0:
+            return  # Exit parent
+    except OSError as e:
+        raise CommandFailed(f"First fork failed: {e}", file=sys.stderr)
+        
+    os.setsid()  # Create new session
+
+    try:
+        pid = os.fork()
+        if pid > 0:
+            os._exit(0)  # Exit second parent
+    except OSError as e:
+        raise CommandFailed(f"Second fork failed: {e}", file=sys.stderr)
+        
+    # Grandchild process — fully detached
+    subprocess.Popen(
+        cmd_plus_args,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    os._exit(os.EX_OK)
+
 def open_link(post_handled_match:PostHandledMatchDefinite, editor_open_cmd:str, browser_open_cmd:str, opener:OpenerType):
     """Open a link using the appropriate handler."""
 
@@ -190,21 +238,7 @@ def open_link(post_handled_match:PostHandledMatchDefinite, editor_open_cmd:str, 
                 raise NoSuitableAppFound("no suitable app was found to open the link")
 
     try:
-        # Run the command and capture stdout and stderr
-        proc = subprocess.Popen(
-            cmd_plus_args,
-            shell=False,  # Execute in the user's default shell
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=False,  # Decode output to strings
-        )
-
-        # Communicate to capture output and error
-        _, stderr = proc.communicate()
-
-        # Check for errors or unexpected output
-        if proc.returncode != 0:
-            raise CommandFailed(f"return code {proc.returncode}: {stderr.decode('utf-8')}")
+        spawn_daemon(cmd_plus_args)
 
     except FileNotFoundError as e:
         raise CommandFailed(f'could not find "{cmd_plus_args[0]}" in the path')
