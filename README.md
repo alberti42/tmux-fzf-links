@@ -167,8 +167,14 @@ Comment out the options you find useful and replace the placeholders with approp
 
    To open a terminal-based editor, such as Emacs or Vim, use `tmux new-window` to ensure the editor opens in a new tmux window. Example:  
    ```tmux
-   set-option -g @fzf-links-editor-open-cmd 'tmux new-window -n "emacs" /usr/local/bin/emacs'
+   set-option -g @fzf-links-editor-open-cmd "tmux new-window -n 'emacs' /usr/local/bin/emacs +%line '%file'"
    ```
+
+   Alternatively, you can open Emacs or Vim in the same tmux window from where you called the script by using a tmux popup window. Example:
+   ```tmux
+   set-option -g @fzf-links-editor-open-cmd "tmux popup -E -w 100% -h 100% /usr/local/bin/emacs +%line '%file'"
+   ```
+   You can customize the size of the popup window by choosing a different value than 100% (`-w`) for the width and height (`-h`).
 
    For desktop applications, such as Sublime Text, you can directly provide the path to the editor. Example:  
    ```tmux
