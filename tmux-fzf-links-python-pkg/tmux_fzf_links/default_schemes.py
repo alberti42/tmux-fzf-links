@@ -92,7 +92,7 @@ url_scheme:SchemeEntry = {
             "display_text": f"{colors.rgb_color(200,0,255)}{m.group(0)}{colors.reset_color}",
             "tag": "url"
         },
-        "regex": [re.compile(r"https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*")]
+        "regex": [re.compile(r"https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*")]
     }
 
 # <<< URL SCHEME <<<
