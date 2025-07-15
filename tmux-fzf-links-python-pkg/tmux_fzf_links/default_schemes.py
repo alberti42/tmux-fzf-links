@@ -106,6 +106,10 @@ def file_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
     if file_path == None:
         # This is not supposed to happen, but to be on the safe side
         return None
+    
+    # configs.logger.warning(f"LEN: {configs.max_path_length}")
+    if len(file_path) > configs.max_path_length:
+        return None
 
     # Drop matches containing only `.` such as current and previous folder
     if all(char == '.' for char in file_path):
@@ -166,16 +170,20 @@ def file_post_handler(match:re.Match[str]) -> PostHandledMatch:
     else:
          # If directory, then cd into the selected directory
         return {'cmd': 'tmux', 'args': ['send-keys', f'cd "{resolved_path_str}"', 'C-m'], 'file':resolved_path_str}
-    
+
+# Upper bound on max path length -- this is further narrowed down by configs.max_path_length
+MAX_PATH_LENGTH = 4096
+
 file_scheme:SchemeEntry = {
         "tags": ("file","dir",),
         "opener": OpenerType.CUSTOM_OPEN,
         "post_handler": file_post_handler,
         "pre_handler": file_pre_handler,
         "regex": [
-            re.compile(r"(?P<link>^[^<>:\"\\|?*\x00-\x1F]+)(\:(?P<line>\d+))?",re.MULTILINE), # filename with spaces, starting at the line beginning
-            re.compile(r"\'(?P<link>[^:\'\"|?*\x00-\x1F]+)\'(\:(?P<line>\d+))?"), # filename with spaces, quoted
-            re.compile(r"(?P<link>[^\ :\'\"|?*\x00-\x1F]+)(\:(?P<line>\d+))?"), # filename not including spaces
+            # Use fr prefix and double the curly braces for the regex quantifier
+            re.compile(fr"(?P<link>^[^<>:\"\\|?*\x00-\x1F]{{1,{MAX_PATH_LENGTH}}})(\:(?P<line>\d+))?",re.MULTILINE), # filename with spaces, starting at the line beginning
+            re.compile(fr"\'(?P<link>[^:\'\"|?*\x00-\x1F]{{1,{MAX_PATH_LENGTH}}}+)\'(\:(?P<line>\d+))?"), # filename with spaces, quoted
+            re.compile(fr"(?P<link>[^\ :\'\"|?*\x00-\x1F]{{1,{MAX_PATH_LENGTH}}}+)(\:(?P<line>\d+))?"), # filename not including spaces
         ]
     }
 

@@ -5,6 +5,7 @@
 #===============================================================================
 
 import logging
+import os
 
 class ConfigurationManager:
     """Parse the configurations and assert their validity"""
@@ -35,9 +36,19 @@ class ConfigurationManager:
             self.use_ls_colors_str = ""
             self.ls_colors_filename = ""
             self.hide_fzf_header:bool = False
+            self.max_path_length = 0
 
             # Root logger
             self.logger:logging.Logger = logging.getLogger()
+
+    def check_filename_length(self,directory:str) -> int: 
+        try:
+            max_path_length = os.pathconf(directory, "PC_NAME_MAX")
+            return max_path_length
+        except OSError as e:
+            self.logger.warning(f"Could not get max filename length: {e}")
+            # return default 128 characters as a conservative backfall scenario
+            return 128
 
     def initialize(self,
             history_lines:str,
@@ -88,6 +99,9 @@ class ConfigurationManager:
         else:
             self.logger.warning(f"Input parameter '@fzf-links-hide-fzf_header' must either be 'on' or 'off', while it was provided: '{hide_fzf_header}'")
             self.hide_fzf_header = False # default
+
+        # Determine max supported length for filenames
+        self.max_path_length = self.check_filename_length('/')
 
 # Instantiate the singleton class
 configs = ConfigurationManager()
