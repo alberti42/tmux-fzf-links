@@ -106,9 +106,9 @@ def file_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
     if file_path == None:
         # This is not supposed to happen, but to be on the safe side
         return None
-    
+        
     # configs.logger.warning(f"LEN: {configs.max_path_length}")
-    if len(file_path) > configs.max_path_length:
+    if len(file_path.encode("utf-8")) > configs.max_path_length:
         return None
 
     # Drop matches containing only `.` such as current and previous folder
@@ -122,6 +122,7 @@ def file_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
     # Return the fully resolved path
     resolved_path = heuristic_find_file(file_path)
     
+    # Drop match if heuristic_find_file failed to find an associated file
     if resolved_path == None:
         return None 
     
