@@ -15,7 +15,7 @@ elif sys.version_info < (3, 11):  # For Python 3.10
     pass
 import shlex
 
-from .errors_types import CommandFailed, NoBrowserConfigured, NoEditorConfigured, NoSuitableAppFound
+from .errors_types import CommandFailed, NoBrowserConfigured, NoEditorConfigured, NoSuitableAppFound, BinaryFileSelected
 
 class OpenerType(Enum):
     EDITOR = 0
@@ -72,6 +72,16 @@ def isValidPostHandledMatchCustomType(value:PostHandledMatchDefinite) -> TypeGua
         return True
     else:
         return False
+
+def isBinaryFile(filePath:str) -> bool:
+    # Check whether it is a binary file. Open the file in binary mode and read a portion of it:
+    with open(filePath,'rb') as file:
+        chunk = file.read(4096)  # Read the first 1024 bytes
+        if b'\0' in chunk:      # Check for null bytes
+            is_binary = True
+        else:
+            is_binary = False
+    return is_binary
 
 # Pre and post handler types
 PreHandler = Callable[[re.Match[str]], PreHandledMatch | None] | None
@@ -206,10 +216,13 @@ def open_link(post_handled_match:PostHandledMatchDefinite, editor_open_cmd:str, 
     else:
         # template with the command to be executed
         template:str
-
+        
         match opener:
             case OpenerType.EDITOR:
                 if isValidPostHandledMatchFileType(post_handled_match):
+                    if isBinaryFile(post_handled_match['file']):
+                        raise BinaryFileSelected(f'binary files cannot be opened with the editor: {post_handled_match['file']}')
+
                     if editor_open_cmd:
                         template = editor_open_cmd
                     else:

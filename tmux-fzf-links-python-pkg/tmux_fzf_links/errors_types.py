@@ -26,6 +26,9 @@ class PatternNotMatching(Exception):
 class NoSuitableAppFound(Exception):
     """Raise exception when no suitable app was found to open the link"""
 
+class BinaryFileSelected(Exception):
+    """Raise exception when a binary file is selected to be opened with the editor"""
+
 class CommandFailed(Exception):
     """Raise exception when the executed app exits with a nonzero return code"""
 
@@ -53,4 +56,4 @@ class LsColorsNotConfigured(Exception):
 class FileLoggingNotAllow(Exception):
     """Raise exception when logging to file is not allowed"""
 
-__all__ = ["FailedChDir", "FailedTmuxPaneSize", "PatternNotMatching", "NoSuitableAppFound", "CommandFailed", "FzfUserInterrupt", "FzfError", "FailedResolvePath"]
+__all__ = ["FailedChDir", "FailedTmuxPaneSize", "PatternNotMatching", "NoSuitableAppFound", "CommandFailed", "FzfUserInterrupt", "FzfError", "FailedResolvePath", "BinaryFileSelected"]

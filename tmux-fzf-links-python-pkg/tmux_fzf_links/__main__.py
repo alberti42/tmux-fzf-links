@@ -347,7 +347,7 @@ def run(
                         continue                        
             
             try:
-                open_link(post_handled_link,editor_open_cmd,browser_open_cmd,schemes[index_scheme]["opener"])
+                open_link(post_handled_link,configs.editor_open_cmd,configs.browser_open_cmd,schemes[index_scheme]["opener"])
             except (NoSuitableAppFound, PatternNotMatching, CommandFailed, NoEditorConfigured, NoBrowserConfigured) as e:
                 logger.error(f"error: {e}")
                 continue
@@ -366,7 +366,7 @@ def run(
             'args': ['set-buffer', '-w', f'{clipped_text}', ';', 'display-message', f"copied selection{plural} to tmux buffer"]
         }
         try:
-            open_link(tmux_buffer_action,editor_open_cmd,browser_open_cmd,OpenerType.CUSTOM_OPEN)
+            open_link(tmux_buffer_action,configs.editor_open_cmd,configs.browser_open_cmd,OpenerType.CUSTOM_OPEN)
         except (NoSuitableAppFound, PatternNotMatching, CommandFailed) as e:
             logger.error(f"error: {e}")
             return

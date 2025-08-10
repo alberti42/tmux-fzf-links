@@ -8,7 +8,7 @@ import re
 import sys
 import shlex
 from .export import OpenerType, SchemeEntry, PreHandledMatch, PostHandledMatch, colors, heuristic_find_file, configs
-from .errors_types import NotSupportedPlatform, FailedResolvePath
+from .errors_types import FailedResolvePath, NoEditorConfigured
 
 # >>> GIT SCHEME >>>
 
@@ -153,21 +153,12 @@ def file_post_handler(match:re.Match[str]) -> PostHandledMatch:
     resolved_path_str = str(resolved_path)
 
     if resolved_path.is_file():
-        # If file, check whether it is a binary file. Open the file in binary mode and read a portion of it:
-        with resolved_path.open('rb') as file:
-            chunk = file.read(4096)  # Read the first 1024 bytes
-            if b'\0' in chunk:      # Check for null bytes
-                is_binary = True
-            else:
-                is_binary = False
-
-        if not is_binary and configs.editor_open_cmd:
-            # If not binary, open the the file with configured editor
+        if configs.editor_open_cmd:
+            # Open the the file with configured editor
             args = shlex.split(configs.editor_open_cmd.replace(f"%file",resolved_path_str).replace(f"%line",line))
             return {'cmd': args[0], 'args':args[1:], 'file': resolved_path_str}
         else:
-            configs.logger.warning(f'warning: binary files cannot be opened with the editor: {resolved_path_str}')
-            return None
+            raise NoEditorConfigured("no editor command is configured")
     else:
          # If directory, then cd into the selected directory
         return {'cmd': 'tmux', 'args': ['send-keys', f'cd "{resolved_path_str}"', 'C-m'], 'file':resolved_path_str}
