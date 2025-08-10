@@ -81,7 +81,8 @@ def run(
         user_schemes_path:str,
         use_ls_colors_str:str,
         ls_colors_filename:str,
-        hide_fzf_header:str,
+        hide_bottom_bar:str,
+        hide_fzf_header:str
     ):
 
     # First thing: set up the logger
@@ -99,6 +100,7 @@ def run(
         user_schemes_path,
         use_ls_colors_str,
         ls_colors_filename,
+        hide_bottom_bar,
         hide_fzf_header)    
 
     # Add extra path if provided

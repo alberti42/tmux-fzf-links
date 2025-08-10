@@ -58,7 +58,7 @@ def run_fzf(fzf_path:str, fzf_display_options: str, choices: list[str], use_ls_c
     # Parse user options into a list
     cmd_user_args: list[str] = shlex.split(fzf_display_options)
 
-    VER_BORDER = 4 + (0 if configs.hide_fzf_header else 1)  # number of characters taken by vertical border
+    VER_BORDER = 4 + (0 if configs.hide_bottom_bar else 1)  # number of characters taken by vertical border
     HOR_BORDER = 2 # number of characters taken by horizontal border
 
     # Command to launch tmux popup
@@ -132,7 +132,7 @@ def run_fzf(fzf_path:str, fzf_display_options: str, choices: list[str], use_ls_c
     if use_ls_colors:
         fzf_args.append('--ansi')
 
-    if not configs.hide_fzf_header:
+    if not configs.hide_bottom_bar:
         if sys.platform == "darwin":
             meta_key = "⌥" # option key
             explorer = "Finder"

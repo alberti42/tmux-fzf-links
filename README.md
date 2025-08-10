@@ -154,7 +154,7 @@ set-option -g @fzf-links-python "python3"
 # set-option -g @fzf-links-user-schemes-path "~/.tmux/plugins/tmux-fzf-links/user_schemes/user_schemes.py"
 set-option -g @fzf-links-use-colors on
 # set-option -g @fzf-links-ls-colors-filename "~/.cache/tmux-fzf-links/cached_ls_colors.txt"
-set-option -g @fzf-links-hide-fzf_header on
+set-option -g @fzf-links-hide-bottom-bar off
 
 run-shell "~/.local/share/tmux-fzf-links/fzf-links.tmux"
 ```
@@ -234,7 +234,7 @@ Comment out the options you find useful and replace the placeholders with approp
    - `@fzf-links-loglevel-file`: Set log verbosity for file logs. Default: `DEBUG`
    - `@fzf-links-log-filename`: Specify the log file location. Omit this property or set it to an empty string to prevent logging to file. Default: `""`
 
-10. **`@fzf-links-hide-fzf_header`**: Prevent the header with instructions from appearing in fzf (`on` or `off`). Default: `off`.
+10. **`@fzf-links-hide-fzf-bottom-bar`**: Hide the bottom bar with the instructions (`on` or `off`). Default: `off`.
 
 ### Tmux popup borders
 

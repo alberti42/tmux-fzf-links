@@ -35,7 +35,7 @@ class ConfigurationManager:
             self.user_schemes_path = ""
             self.use_ls_colors_str = ""
             self.ls_colors_filename = ""
-            self.hide_fzf_header:bool = False
+            self.hide_bottom_bar:bool = False
             self.max_path_length = 0
 
             # Root logger
@@ -63,6 +63,7 @@ class ConfigurationManager:
             user_schemes_path:str,
             use_ls_colors_str:str,
             ls_colors_filename:str,
+            hide_bottom_bar:str,
             hide_fzf_header:str
         ):
 
@@ -92,13 +93,17 @@ class ConfigurationManager:
         
         self.ls_colors_filename = ls_colors_filename
 
-        if hide_fzf_header == 'on':
-            self.hide_fzf_header = True
-        elif hide_fzf_header == 'off':
-            self.hide_fzf_header = False
+        if hide_fzf_header != 'DEPRECATED':
+           hide_bottom_bar = hide_fzf_header
+           self.logger.warning(f"Please rename deprecated tmux variable '@fzf-links-hide-fzf-header' to 'fzf-links-hide-fzf-header' {hide_fzf_header}")
+
+        if hide_bottom_bar == 'on':
+            self.hide_bottom_bar = True
+        elif hide_bottom_bar == 'off':
+            self.hide_bottom_bar = False
         else:
-            self.logger.warning(f"Input parameter '@fzf-links-hide-fzf_header' must either be 'on' or 'off', while it was provided: '{hide_fzf_header}'")
-            self.hide_fzf_header = False # default
+            self.logger.warning(f"Input parameter '@fzf-links-hide-bottom-bar' must either be 'on' or 'off', while it was provided: '{hide_bottom_bar}'")
+            self.hide_bottom_bar = False # default
 
         # Determine max supported length for filenames
         self.max_path_length = self.check_filename_length('/')

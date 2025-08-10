@@ -36,7 +36,8 @@ python_path=$(tmux_get '@fzf-links-python-path' '')
 use_colors=$(tmux_get '@fzf-links-use-colors' 'on')
 ls_colors_filename=$(tmux_get '@fzf-links-ls-colors-filename' '')
 user_schemes_path=$(tmux_get '@fzf-links-user-schemes-path' '')
-hide_fzf_header=$(tmux_get '@fzf-links-hide-fzf-header' 'off')
+hide_fzf_header=$(tmux_get '@fzf-links-hide-fzf-header' 'DEPRECATED')
+hide_bottom_bar=$(tmux_get '@fzf-links-hide-bottom-bar' 'off') # deprecated option
 
 # Expand variables to resolve ~ and environment variables (e.g. $HOME)
 path_extension=$(eval echo "$path_extension")
@@ -51,5 +52,5 @@ tmux bind-key -N "Open links with fuzzy finder (tmux-fzf-links plugin)" "$key" r
   tmux display-message -d 0 \"fzf-links: no executable python found at the location: $python_path\"
   exit 0
 fi
-PYTHONPATH=\"$SCRIPT_DIR/tmux-fzf-links-python-pkg:$python_path\" \"$python\" -m tmux_fzf_links \"$history_lines\" \"$editor_open_cmd\" \"$browser_open_cmd\" \"$fzf_path\" \"$fzf_display_options\" \"$path_extension\" \"$loglevel_tmux\" \"$loglevel_file\" \"$log_filename\" \"$user_schemes_path\" \"$use_colors\" \"$ls_colors_filename\" \"$hide_fzf_header\"
+PYTHONPATH=\"$SCRIPT_DIR/tmux-fzf-links-python-pkg:$python_path\" \"$python\" -m tmux_fzf_links \"$history_lines\" \"$editor_open_cmd\" \"$browser_open_cmd\" \"$fzf_path\" \"$fzf_display_options\" \"$path_extension\" \"$loglevel_tmux\" \"$loglevel_file\" \"$log_filename\" \"$user_schemes_path\" \"$use_colors\" \"$ls_colors_filename\" \"$hide_bottom_bar\" \"$hide_fzf_header\"
 "
