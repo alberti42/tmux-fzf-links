@@ -166,18 +166,28 @@ def file_post_handler(match:re.Match[str]) -> PostHandledMatch:
 # Upper bound on max path length -- this is further narrowed down by configs.max_path_length
 MAX_PATH_LENGTH = 4096
 
-file_scheme:SchemeEntry = {
-        "tags": ("file","dir",),
-        "opener": OpenerType.CUSTOM_OPEN,
-        "post_handler": file_post_handler,
-        "pre_handler": file_pre_handler,
-        "regex": [
-            # Use fr prefix and double the curly braces for the regex quantifier
-            re.compile(fr"(?P<link>^[^<>:\"\\|?*\x00-\x1F]{{1,{MAX_PATH_LENGTH}}})(\:(?P<line>\d+))?",re.MULTILINE), # filename with spaces, starting at the line beginning
-            re.compile(fr"\'(?P<link>[^:\'\"|?*\x00-\x1F]{{1,{MAX_PATH_LENGTH}}}+)\'(\:(?P<line>\d+))?"), # filename with spaces, quoted
-            re.compile(fr"(?P<link>[^\ :\'\"|?*\x00-\x1F]{{1,{MAX_PATH_LENGTH}}}+)(\:(?P<line>\d+))?"), # filename not including spaces
-        ]
-    }
+file_scheme: SchemeEntry = {
+    "tags": ("file","dir",),
+    "opener": OpenerType.CUSTOM_OPEN,
+    "post_handler": file_post_handler,
+    "pre_handler": file_pre_handler,
+    # Use fr prefix and double the curly braces for the regex quantifier
+    "regex": [
+        # filename with spaces, starting at the line beginning
+        re.compile(
+            fr"(?P<link>^[^<>:\"\\|?*\x00-\x1F]{{1,{MAX_PATH_LENGTH}}})(\:(?P<line>\d+))?",
+            re.MULTILINE
+        ),
+        # filename with spaces, quoted
+        re.compile(
+            fr"'(?P<link>[^:'\"\\|?*\x00-\x1F]{{1,{MAX_PATH_LENGTH}}})'(\:(?P<line>\d+))?"
+        ),
+        # filename not including spaces
+        re.compile(
+            fr"(?P<link>[^ :'\"\\|?*\x00-\x1F]{{1,{MAX_PATH_LENGTH}}})(\:(?P<line>\d+))?"
+        ),
+    ]
+}
 
 # <<< FILE SCHEME <<<
 
