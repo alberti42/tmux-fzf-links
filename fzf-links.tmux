@@ -54,24 +54,27 @@ if [[ ! -x \"$python\" ]]; then
   exit 0
 fi
 
-# Build the Python command as a single string
-cmd=\"PYTHONPATH='$SCRIPT_DIR/tmux-fzf-links-python-pkg:$python_path' \\
-$python -m tmux_fzf_links \\
-'$history_lines' '$editor_open_cmd' '$browser_open_cmd' \\
-'$fzf_path' '$fzf_display_options' '$path_extension' \\
-'$loglevel_tmux' '$loglevel_file' '$log_filename' \\
-'$user_schemes_path' '$use_colors' '$ls_colors_filename' \\
-'$hide_bottom_bar' '$hide_fzf_header'\"
+# Build argv as an array (no eval, no double-parsing)
+args=(
+  -m tmux_fzf_links
+  \"$history_lines\" \"$editor_open_cmd\" \"$browser_open_cmd\"
+  \"$fzf_path\" \"$fzf_display_options\" \"$path_extension\"
+  \"$loglevel_tmux\" \"$loglevel_file\" \"$log_filename\"
+  \"$user_schemes_path\" \"$use_colors\" \"$ls_colors_filename\"
+  \"$hide_bottom_bar\" \"$hide_fzf_header\"
+)
 
-# Run and capture stderr+stdout
-output=\$(eval \"\$cmd\" 2>&1)
-status=\$?
+# Run and capture both stdout+stderr; keep exit status even with tee
+PYTHONPATH=\"$SCRIPT_DIR/tmux-fzf-links-python-pkg:$python_path\" \"$python\" \"\${args[@]}\" 2>&1
+status=\${PIPESTATUS[0]}
 
 if [[ \$status -ne 0 ]]; then
-  # Show command and error in tmux (truncated to avoid overflow)
+  # Build a reproducible command string (properly shell-escaped)
+  display_cmd=\$(printf \"%q \" PYTHONPATH=\"$SCRIPT_DIR/tmux-fzf-links-python-pkg:$python_path\" \"$python\" \"\${args[@]}\")
+
   tmux display-message -d 0 \"fzf-links: Python script unexpectedly exited with status \$status\"
   echo \"\$output\"
   echo \"\nIf you want to reproduce (and possibly debug) the error, type on the command line:\n\"
-  echo \"\$cmd\"
+  echo \"\$display_cmd\"
 fi
 "

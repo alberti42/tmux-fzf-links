@@ -5,7 +5,6 @@
 #===============================================================================
 
 import re
-import sys
 import shlex
 from .export import OpenerType, SchemeEntry, PreHandledMatch, PostHandledMatch, colors, heuristic_find_file, configs
 from .errors_types import FailedResolvePath, NoEditorConfigured
