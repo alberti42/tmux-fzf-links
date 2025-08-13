@@ -48,9 +48,30 @@ ls_colors_filename=$(eval echo "$ls_colors_filename")
 user_schemes_path=$(eval echo "$user_schemes_path")
 
 # Bind the key in Tmux to run the Python script
-tmux bind-key -N "Open links with fuzzy finder (tmux-fzf-links plugin)" "$key" run-shell "if [[ ! -x \"$python\" ]]; then
-  tmux display-message -d 0 \"fzf-links: no executable python found at the location: $python_path\"
+tmux bind-key -N "Open links with fuzzy finder (tmux-fzf-links plugin)" "$key" run-shell "
+if [[ ! -x \"$python\" ]]; then
+  tmux display-message -d 0 \"fzf-links: no executable python found at the location: $python\"
   exit 0
 fi
-PYTHONPATH=\"$SCRIPT_DIR/tmux-fzf-links-python-pkg:$python_path\" \"$python\" -m tmux_fzf_links \"$history_lines\" \"$editor_open_cmd\" \"$browser_open_cmd\" \"$fzf_path\" \"$fzf_display_options\" \"$path_extension\" \"$loglevel_tmux\" \"$loglevel_file\" \"$log_filename\" \"$user_schemes_path\" \"$use_colors\" \"$ls_colors_filename\" \"$hide_bottom_bar\" \"$hide_fzf_header\"
+
+# Build the Python command as a single string
+cmd=\"PYTHONPATH='$SCRIPT_DIR/tmux-fzf-links-python-pkg:$python_path' \\
+$python -m tmux_fzf_links \\
+'$history_lines' '$editor_open_cmd' '$browser_open_cmd' \\
+'$fzf_path' '$fzf_display_options' '$path_extension' \\
+'$loglevel_tmux' '$loglevel_file' '$log_filename' \\
+'$user_schemes_path' '$use_colors' '$ls_colors_filename' \\
+'$hide_bottom_bar' '$hide_fzf_header'\"
+
+# Run and capture stderr+stdout
+output=\$(eval \"\$cmd\" 2>&1)
+status=\$?
+
+if [[ \$status -ne 0 ]]; then
+  # Show command and error in tmux (truncated to avoid overflow)
+  tmux display-message -d 0 \"fzf-links: Python script unexpectedly exited with status \$status\"
+  echo \"\$output\"
+  echo \"\nIf you want to reproduce (and possibly debug) the error, type on the command line:\n\"
+  echo \"\$cmd\"
+fi
 "
