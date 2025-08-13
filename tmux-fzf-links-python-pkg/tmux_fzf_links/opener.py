@@ -221,7 +221,7 @@ def open_link(post_handled_match:PostHandledMatchDefinite, editor_open_cmd:str, 
             case OpenerType.EDITOR:
                 if isValidPostHandledMatchFileType(post_handled_match):
                     if isBinaryFile(post_handled_match['file']):
-                        raise BinaryFileSelected(f'binary files cannot be opened with the editor: {post_handled_match['file']}')
+                        raise BinaryFileSelected(f'binary files cannot be opened with the editor: {post_handled_match["file"]}')
 
                     if editor_open_cmd:
                         template = editor_open_cmd
