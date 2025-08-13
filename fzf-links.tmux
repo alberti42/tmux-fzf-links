@@ -42,7 +42,7 @@ hide_bottom_bar=$(tmux_get '@fzf-links-hide-bottom-bar' 'off') # deprecated opti
 # Expand variables to resolve ~ and environment variables (e.g. $HOME)
 path_extension=$(eval echo "$path_extension")
 log_filename=$(eval echo "$log_filename")
-python=$(eval which "$python")
+python=$(eval echo "$python")
 python_path=$(eval echo "$python_path")
 ls_colors_filename=$(eval echo "$ls_colors_filename")
 user_schemes_path=$(eval echo "$user_schemes_path")
