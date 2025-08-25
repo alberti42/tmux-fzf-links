@@ -181,15 +181,46 @@ Comment out the options you find useful and replace the placeholders with approp
    set-option -g @fzf-links-editor-open-cmd '/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl'
    ```
 
-   Default setting: `tmux new-window -n 'vim' vim +%line '%file'`
+   If your $EDITOR variable is already configured before you star tmux server, then you could also use it to define `@fzf-links-editor-open-cmd`. However, keep in mind that different editors use different syntaxex to designate the line number; thus, adjust the example as it fits to your editor:
+	```tmux
+	set-option -g @fzf-links-editor-open-cmd "$EDITOR '%file':%line"
+	```
 
-2. **`@fzf-links-browser-open-cmd`**: This option specifies the command for opening the browser. User `%url` as the placeholder for the url to be opened.
+	If you prefer to maintain a single configuration file `.tmux.conf` across different platforms, you can use a conditional statement as in the example below:
+	```tmux
+	if-shell 'OSTYPE=$(uname -s) && case $OSTYPE in "Linux") true; ;; *) false; ;; esac' {
+	  # Linux
+	  set-option -g @fzf-links-editor-open-cmd "tmux new-window -n 'emacs' /usr/bin/emacsclient -nw -c +%line '%file'"
+	}{
+	  if-shell 'OSTYPE=$(uname -s) && case $OSTYPE in "Darwin") true; ;; *) false; ;; esac' {
+	    # Darwin
+	    set-option -g @fzf-links-editor-open-cmd "open vscode://file'%file':%line"
+	  }
+	}
+	```
 
-	 Default setting: `firefox '%url'`
+  Default setting: `tmux new-window -n 'vim' vim +%line '%file'`
+
+2. **`@fzf-links-browser-open-cmd`**: This option specifies the command for opening the browser. User `%url` as the placeholder for the URL to be opened.
+
+	As with `@fzf-links-editor-open-cmd`, you can also use a conditional statement with `@fzf-links-browser-open-cmd` to open URL addresses in a cross-platform-compatible manner:
+	```tmux
+	if-shell 'OSTYPE=$(uname -s) && case $OSTYPE in "Linux") true; ;; *) false; ;; esac' {
+	  # Linux
+	  set-option -g @fzf-links-browser-open-cmd "xdg-open '%url'"
+	}{
+	  if-shell 'OSTYPE=$(uname -s) && case $OSTYPE in "Darwin") true; ;; *) false; ;; esac' {
+	    # Darwin
+	    set-option -g @fzf-links-browser-open-cmd "open '%url'"
+	  }
+	}
+	```
+
+	Default setting: `firefox '%url'`
 
 3. **`@fzf-links-fzf-path`**: This option specifies the path to `fzf` command. It is only useful when `fzf` is not directly available in the $PATH.
 
-	 Default setting: `fzf`
+	Default setting: `fzf`
 
 4. **`@fzf-links-fzf-display-options`**: This option specifies the arguments passed to `fzf`. Refer to the man page of [`fzf`](https://github.com/junegunn/fzf#options) for detailed documentation of the available arguments. In addition to the fzf arguments, this option can contain additional argument, which are specific to this plugin and documented below:
 
@@ -209,7 +240,7 @@ Comment out the options you find useful and replace the placeholders with approp
 
 5. **`@fzf-links-history-lines`**: An integer number determining how many extra lines of history to consider.
 
-	 Default setting: `0`
+	Default setting: `0`
 
 6. **`@fzf-links-ls-colors-filename`**: A file containing the content of $LS_COLORS. For example, you can save $LS_COLORS to a cached file using:
 	 ```bash
