@@ -11,13 +11,22 @@ tmux_get() {
   local tmux_param_name=$1
   local default_param=$2
   local value
-  
+
   value=$(tmux show -gqv "$tmux_param_name")
   if [[ -n "$value" ]]; then
-      echo "$value"
+      printf '%s\n' "$value"
   else
-      echo "$default_param"
+      printf '%s\n' "$default_param"
   fi
+}
+
+# Safe "expand ~ and $VARS" without letting globbing bite us
+expand_vars() {
+  local s=$1 out
+  set -f                               # disable globbing (noglob)
+  out=$(builtin eval "printf '%s' \"$s\"")
+  set +f
+  printf '%s\n' "$out"
 }
 
 # Fetch Tmux options with defaults
@@ -40,41 +49,51 @@ hide_fzf_header=$(tmux_get '@fzf-links-hide-fzf-header' 'DEPRECATED')
 hide_bottom_bar=$(tmux_get '@fzf-links-hide-bottom-bar' 'off') # deprecated option
 
 # Expand variables to resolve ~ and environment variables (e.g. $HOME)
-path_extension=$(eval echo "$path_extension")
-log_filename=$(eval echo "$log_filename")
-python=$(eval echo "$python")
-python_path=$(eval echo "$python_path")
-ls_colors_filename=$(eval echo "$ls_colors_filename")
-user_schemes_path=$(eval echo "$user_schemes_path")
+path_extension=$(expand_vars "$path_extension")
+log_filename=$(expand_vars "$log_filename")
+python=$(expand_vars "$python")
+python_path=$(expand_vars "$python_path")
+ls_colors_filename=$(expand_vars "$ls_colors_filename")
+user_schemes_path=$(expand_vars "$user_schemes_path")
+
+# Resolve python to an absolute path if possible; fall back to the given string
+if python_resolved=$(command -v -- "$python" 2>/dev/null); then
+  python="$python_resolved"
+fi
+
+# Prebuild a fully quoted command line (safe for /bin/sh in run-shell)
+quote() { printf "%q" "$1"; }
+
+PYENV="PYTHONPATH=$SCRIPT_DIR/tmux-fzf-links-python-pkg:$python_path"
+
+# Arguments to the module, in order
+args=(
+  -m tmux_fzf_links
+  "$history_lines" "$editor_open_cmd" "$browser_open_cmd"
+  "$fzf_path" "$fzf_display_options" "$path_extension"
+  "$loglevel_tmux" "$loglevel_file" "$log_filename"
+  "$user_schemes_path" "$use_colors" "$ls_colors_filename"
+  "$hide_bottom_bar" "$hide_fzf_header"
+)
+
+# Build the one-liner to hand to tmux (no arrays inside tmux; plain sh is fine)
+cmd=$(printf "%q " env "$PYENV" "$python" "${args[@]}")
 
 # Bind the key in Tmux to run the Python script
 tmux bind-key -N "Open links with fuzzy finder (tmux-fzf-links plugin)" "$key" run-shell "
-if [[ ! -x \"$python\" ]]; then
-  tmux display-message -d 0 \"fzf-links: no executable python found at the location: $python\"
+# If python is not an executable path, just report and exit.
+if [ ! -x $(quote "$python") ]; then
+  tmux display-message -d 0 'fzf-links: no executable python found at: '$(quote "$python")
   exit 0
 fi
 
-# Build argv as an array (no eval, no double-parsing)
-args=(
-  -m tmux_fzf_links
-  \"$history_lines\" \"$editor_open_cmd\" \"$browser_open_cmd\"
-  \"$fzf_path\" \"$fzf_display_options\" \"$path_extension\"
-  \"$loglevel_tmux\" \"$loglevel_file\" \"$log_filename\"
-  \"$user_schemes_path\" \"$use_colors\" \"$ls_colors_filename\"
-  \"$hide_bottom_bar\" \"$hide_fzf_header\"
-)
+# Run the command via /bin/sh-compatible syntax; capture status
+$cmd 2>&1
+status=\$?
 
-# Run and capture both stdout+stderr; keep exit status even with tee
-PYTHONPATH=\"$SCRIPT_DIR/tmux-fzf-links-python-pkg:$python_path\" \"$python\" \"\${args[@]}\" 2>&1
-status=\${PIPESTATUS[0]}
-
-if [[ \$status -ne 0 ]]; then
-  # Build a reproducible command string (properly shell-escaped)
-  display_cmd=\$(printf \"%q \" PYTHONPATH=\"$SCRIPT_DIR/tmux-fzf-links-python-pkg:$python_path\" \"$python\" \"\${args[@]}\")
-
+if [ \$status -ne 0 ]; then
   tmux display-message -d 0 \"fzf-links: Python script unexpectedly exited with status \$status\"
-  echo \"\$output\"
-  echo \"\nIf you want to reproduce (and possibly debug) the error, type on the command line:\n\"
-  echo \"\$display_cmd\"
+  printf '%s\n\n' 'If you want to reproduce (and possibly debug) the error, run in your shell the command below:'
+  printf '%s\n' \"$cmd\"
 fi
 "
