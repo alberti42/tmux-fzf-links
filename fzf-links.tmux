@@ -78,6 +78,7 @@ args=(
 
 # Build the one-liner to hand to tmux (no arrays inside tmux; plain sh is fine)
 cmd=$(printf "%q " env "$PYENV" "$python" "${args[@]}")
+cmd=${cmd% }   # strip trailing space in $cmd
 
 # Bind the key in Tmux to run the Python script
 tmux bind-key -N "Open links with fuzzy finder (tmux-fzf-links plugin)" "$key" run-shell "
