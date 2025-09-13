@@ -122,18 +122,20 @@ def run(
 
     # Retrieve the current pane size
     try:
-        pane_size_str:str = subprocess.check_output(
-            ('tmux', 'display', '-p', '#{pane_height},#{pane_width},#{scroll_position},',),
+        display_size_str:str = subprocess.check_output(
+            ('tmux', 'display', '-p', '#{window_height},#{window_width},#{pane_height},#{pane_width},#{scroll_position},',),
             shell=False,
             text=True,
         )
-        pane_size_list = pane_size_str.split(',')
-        pane_height = int(pane_size_list[0])
-        pane_width = int(pane_size_list[1])
+        pane_size_list = display_size_str.split(',')
+        window_height = int(pane_size_list[0])
+        window_width = int(pane_size_list[1])
+        pane_height = int(pane_size_list[2])
+        pane_width = int(pane_size_list[3])
 
         scroll_position:int
-        if pane_size_list[2]:
-            scroll_position = int(pane_size_list[2])
+        if pane_size_list[4]:
+            scroll_position = int(pane_size_list[4])
         else:
             scroll_position = 0
         
@@ -255,15 +257,15 @@ def run(
     max_len_tag_names:int = max([len(item[0]["tag"]) for item in items])
         
     # Number the items
-    numbered_choices = [f"{colors.index_color}{idx:4d}{colors.reset_color} {colors.dash_color}-{colors.reset_color} " \
-        f"{colors.tag_color}{('['+item[0]['tag']+']').ljust(max_len_tag_names+2)}{colors.reset_color} {colors.dash_color}-{colors.reset_color} " \
+    numbered_choices = [f"{colors.index_color}{idx:4d}{colors.reset_color} {colors.dash_color}-{colors.reset_color} "
+        + f"{colors.tag_color}{('['+item[0]['tag']+']').ljust(max_len_tag_names+2)}{colors.reset_color} {colors.dash_color}-{colors.reset_color} "
         # add 2 character because of `[` and `]` \
-        f"{item[0]['display_text']}" for idx, item in enumerate(items, 1)]
+        + f"{item[0]['display_text']}" for idx, item in enumerate(items, 1)]
 
     # Run fzf and get selected items
     try:
         # Run fzf and get selected items
-        fzf_result:FzfReturnType = run_fzf(configs.fzf_path,configs.fzf_display_options,numbered_choices,colors.enabled,pane_height,pane_width)
+        fzf_result:FzfReturnType = run_fzf(configs.fzf_path,configs.fzf_display_options,numbered_choices,colors.enabled,window_height,window_width)
     except FzfUserInterrupt as e:
         sys.exit(0)
 
