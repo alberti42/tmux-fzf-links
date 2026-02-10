@@ -186,37 +186,25 @@ Comment out the options you find useful and replace the placeholders with approp
 	set-option -g @fzf-links-editor-open-cmd "$EDITOR '%file':%line"
 	```
 
-	If you prefer to maintain a single configuration file `.tmux.conf` across different platforms, you can use a conditional statement as in the example below:
+	If you prefer to maintain a single configuration file `.tmux.conf` across different platforms, you can use a conditional statement as in the example below. This sets both the editor and browser commands with a single OS check:
 	```tmux
-	if-shell 'OSTYPE=$(uname -s) && case $OSTYPE in "Linux") true; ;; *) false; ;; esac' {
-	  # Linux
-	  set-option -g @fzf-links-editor-open-cmd "tmux new-window -n 'emacs' /usr/bin/emacsclient -nw -c +%line '%file'"
+	if-shell '[ "$(uname -s)" = "Darwin" ]' {
+	  # macOS
+	  set-option -g @fzf-links-editor-open-cmd "open vscode://file'%file':%line"
+	  set-option -g @fzf-links-browser-open-cmd "open '%url'"
 	}{
-	  if-shell 'OSTYPE=$(uname -s) && case $OSTYPE in "Darwin") true; ;; *) false; ;; esac' {
-	    # Darwin
-	    set-option -g @fzf-links-editor-open-cmd "open vscode://file'%file':%line"
-	  }
+	  # Linux and others
+	  set-option -g @fzf-links-editor-open-cmd "tmux new-window -n 'emacs' /usr/bin/emacsclient -nw -c +%line '%file'"
+	  set-option -g @fzf-links-browser-open-cmd "xdg-open '%url'"
 	}
 	```
+	If `$OSTYPE` is exported in your environment (e.g., you start `tmux` from a bash or zsh shell), you can replace the test `[ "$(uname -s)" = "Darwin" ]` with `case "$OSTYPE" in darwin*) true;; *) false;; esac` to avoid executing `uname -s` in a subshell.
 
   Default setting: `tmux new-window -n 'vim' vim +%line '%file'`
 
-2. **`@fzf-links-browser-open-cmd`**: This option specifies the command for opening the browser. User `%url` as the placeholder for the URL to be opened.
+2. **`@fzf-links-browser-open-cmd`**: This option specifies the command for opening the browser. Use `%url` as the placeholder for the URL to be opened. See the cross-platform example in note 1 above for configuring this option across different platforms.
 
-	As with `@fzf-links-editor-open-cmd`, you can also use a conditional statement with `@fzf-links-browser-open-cmd` to open URL addresses in a cross-platform-compatible manner:
-	```tmux
-	if-shell 'OSTYPE=$(uname -s) && case $OSTYPE in "Linux") true; ;; *) false; ;; esac' {
-	  # Linux
-	  set-option -g @fzf-links-browser-open-cmd "xdg-open '%url'"
-	}{
-	  if-shell 'OSTYPE=$(uname -s) && case $OSTYPE in "Darwin") true; ;; *) false; ;; esac' {
-	    # Darwin
-	    set-option -g @fzf-links-browser-open-cmd "open '%url'"
-	  }
-	}
-	```
-
-	Default setting: `firefox '%url'`
+	Default setting: `open '%url'` on macOS, `xdg-open '%url'` on Linux and others
 
 3. **`@fzf-links-fzf-path`**: This option specifies the path to `fzf` command. It is only useful when `fzf` is not directly available in the $PATH.
 

@@ -29,11 +29,17 @@ expand_vars() {
   printf '%s\n' "$out"
 }
 
+# Set browser open command default based on OS
+case "$OSTYPE" in
+  darwin*) browser_open_default="open '%url'" ;;
+  *)       browser_open_default="xdg-open '%url'" ;;
+esac
+
 # Fetch Tmux options with defaults
 key=$(tmux_get '@fzf-links-key' 'C-h')
 history_lines=$(tmux_get '@fzf-links-history-lines' '0')
 editor_open_cmd=$(tmux_get '@fzf-links-editor-open-cmd' "tmux new-window -n 'vim' vim +%line '%file'")
-browser_open_cmd=$(tmux_get '@fzf-links-browser-open-cmd' "firefox '%url'")
+browser_open_cmd=$(tmux_get '@fzf-links-browser-open-cmd' "$browser_open_default")
 fzf_path=$(tmux_get '@fzf-links-fzf-path' 'fzf')
 fzf_display_options=$(tmux_get '@fzf-links-fzf-display-options' '-w 100% --maxnum-displayed 20 --multi --track --no-preview')
 path_extension=$(tmux_get '@fzf-links-path-extension' '')
