@@ -1,3 +1,5 @@
 **/*.sublime-workspace
 **/*.pyc
 **/*.egg-info
+*.md
+*.dist

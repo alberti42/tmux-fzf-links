@@ -1,0 +1,77 @@
+#!/usr/bin/env zsh
+
+emulate -LR zsh -o warn_create_global -o no_short_loops
+setopt errexit nounset pipefail
+
+# Build a release zip without committing artifacts.
+#
+# The zip contains only the runtime files needed by users:
+# - plugin entrypoint
+# - src/ modules
+# - bin/ helpers
+# - README + LICENSE
+# - examples/
+# - logo/ (README references it)
+
+function _usage() {
+  print -r -- "usage: $1 <version-tag>" >&2
+  print -r -- "example: $1 0.1.0" >&2
+}
+
+local version=${1:-}
+if [[ -z $version ]]; then
+  _usage "${0:t}"
+  exit 2
+fi
+
+local repo_root
+repo_root=$(command git rev-parse --show-toplevel 2>/dev/null) || {
+  print -r -- "${0:t}: must run inside a git repository" >&2
+  exit 1
+}
+
+cd "$repo_root"
+
+local out_dir=dist
+command mkdir -p -- "$out_dir"
+
+local package_dir="tmux-fzf-links-${version}"
+local zip_path="$out_dir/${package_dir}.zip"
+
+local tmp
+tmp=$(command mktemp -d 2>/dev/null || command mktemp -d -t zac-release)
+trap 'command rm -rf -- "$tmp" 2>/dev/null || true' EXIT
+
+local stage="$tmp/$package_dir"
+command mkdir -p -- "$stage"
+
+local -a paths
+paths=(
+  README.md
+  LICENSE
+  fzf-links.tmux
+  tmux-fzf-links-python-pkg
+  user_schemes
+)
+
+local p
+for p in $paths; do
+  if [[ ! -e $p ]]; then
+    print -r -- "${0:t}: missing path: $p" >&2
+    exit 1
+  fi
+done
+
+command rsync -a --delete \
+  --exclude '.DS_Store' \
+  --exclude '*.zwc' \
+  --exclude '*.ai' \
+  --exclude 'bin/make-release-zip' \
+  --exclude '__pycache__' \
+  -- ${paths[@]} "$stage/"
+
+command rm -f -- "$zip_path" 2>/dev/null || true
+
+(cd "$tmp" && zip -qr "$repo_root/$zip_path" "$package_dir")
+
+print -r -- "$zip_path"
