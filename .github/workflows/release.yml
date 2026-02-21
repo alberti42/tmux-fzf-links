@@ -41,3 +41,6 @@ jobs:
         with:
           files: dist/*.zip
           generate_release_notes: true
+          make_latest: true
+          draft: true
+          prerelease: false
