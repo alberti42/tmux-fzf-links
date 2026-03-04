@@ -15,7 +15,7 @@ elif sys.version_info < (3, 11):  # For Python 3.10
     pass
 import shlex
 
-from .errors_types import CommandFailed, NoBrowserConfigured, NoEditorConfigured, NoSuitableAppFound, BinaryFileSelected
+from .errors_types import CommandFailed, NoBrowserConfigured, NoEditorConfigured, NoSuitableAppFound, BinaryFileSelected, NotSupportedPlatform
 
 class OpenerType(Enum):
     EDITOR = 0
