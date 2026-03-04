@@ -1,9 +1,6 @@
-#!/usr/bin/env -S /opt/homebrew/bin/bash --noprofile --norc
+#!/usr/bin/env -S bash --noprofile --norc
 
 # Andrea Alberti, 2024
-
-# Start profiling the entire script load time
-_prof_start=$EPOCHREALTIME
 
 # Resolve the directory containing this script
 SCRIPT_DIR=${BASH_SOURCE[0]%/*}
@@ -140,10 +137,3 @@ if [ \$status -ne 0 ]; then
   printf '%s\n' \"$cmd\"
 fi
 "
-
-# End profiling the entire script load time
-_prof_end=$EPOCHREALTIME
-
-# Log the total load duration in milliseconds to ~/tmux-fzf-links.log
-# Note: This includes the time spent calling `tmux show` for options.
-python3 -c "print(f'$(date): Full plugin load took {int(($_prof_end - $_prof_start) * 1000)}ms')" >> ~/tmux-fzf-links.log
