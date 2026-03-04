@@ -159,6 +159,10 @@ def spawn_daemon(cmd_plus_args: list[str]):
     - On Unix, uses double-fork daemonization; see double-fork magic, see Stevens' "Advanced Programming in the UNIX Environment" for details (ISBN 0201563177)
     - On Windows, uses DETACHED_PROCESS and CREATE_NEW_PROCESS_GROUP.
     """
+    # Targeted tilde expansion: only expand if an argument starts with ~/
+    # This is safe and doesn't require complex shell-like evaluation.
+    cmd_plus_args = [os.path.expanduser(arg) if arg.startswith('~/') else arg for arg in cmd_plus_args]
+
     if sys.platform == "win32":
         DETACHED_PROCESS = subprocess.DETACHED_PROCESS
         CREATE_NEW_PROCESS_GROUP = subprocess.CREATE_NEW_PROCESS_GROUP
