@@ -46,9 +46,9 @@ _bulk_options=$(tmux display-message -p \
 #{@fzf-links-user-schemes-path}
 #{@fzf-links-hide-fzf-header}
 #{@fzf-links-hide-bottom-bar}
+END_MARKER")
 # We add END_MARKER to prevent Bash from stripping trailing empty lines from $(...),
 # which would misalign the subsequent 'read' commands.
-END_MARKER")
 
 # Map the bulk options to variables, providing defaults where empty
 {
@@ -104,16 +104,8 @@ if python_resolved=$(command -v -- "$python" 2>/dev/null); then
   python="$python_resolved"
 fi
 
-# End profiling the entire script load time
-_prof_end=$EPOCHREALTIME
-
-# Log the total load duration in milliseconds to ~/tmux-fzf-links.log
-# Note: This includes the time spent calling `tmux show` for options.
-python3 -c "print(f'$(date): Full plugin load took {int(($_prof_end - $_prof_start) * 1000)}ms')" >> ~/tmux-fzf-links.log
-
 # Prebuild a fully quoted command line (safe for /bin/sh in run-shell)
-quote() { printf "%q" "$1"; }
-
+python_q=$(printf "%q" "$python")
 PYENV="PYTHONPATH=$SCRIPT_DIR/tmux-fzf-links-python-pkg:$python_path"
 
 # Arguments to the module, in order
@@ -133,8 +125,8 @@ cmd=${cmd% }   # strip trailing space in $cmd
 # Bind the key in Tmux to run the Python script
 tmux bind-key -N "Open links with fuzzy finder (tmux-fzf-links plugin)" "$key" run-shell "
 # If python is not an executable path, just report and exit.
-if [ ! -x $(quote "$python") ]; then
-  tmux display-message -d 0 'fzf-links: no executable python found at: '$(quote "$python")
+if [ ! -x $python_q ]; then
+  tmux display-message -d 0 \"fzf-links: no executable python found at: $python\"
   exit 0
 fi
 
@@ -148,3 +140,10 @@ if [ \$status -ne 0 ]; then
   printf '%s\n' \"$cmd\"
 fi
 "
+
+# End profiling the entire script load time
+_prof_end=$EPOCHREALTIME
+
+# Log the total load duration in milliseconds to ~/tmux-fzf-links.log
+# Note: This includes the time spent calling `tmux show` for options.
+python3 -c "print(f'$(date): Full plugin load took {int(($_prof_end - $_prof_start) * 1000)}ms')" >> ~/tmux-fzf-links.log
