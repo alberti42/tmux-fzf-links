@@ -8,21 +8,6 @@ _prof_start=$EPOCHREALTIME
 # Resolve the directory containing this script
 SCRIPT_DIR=${BASH_SOURCE[0]%/*}
 
-# $1: option
-# $2: default value
-tmux_get() {
-  local tmux_param_name=$1
-  local default_param=$2
-  local value
-
-  value=$(tmux show -gqv "$tmux_param_name")
-  if [[ -n "$value" ]]; then
-      printf '%s\n' "$value"
-  else
-      printf '%s\n' "$default_param"
-  fi
-}
-
 # Pure Bash expansion for ~ (Zero forks, zero subshells)
 # Set the result into $REPLY
 expand_vars() {
@@ -41,32 +26,69 @@ case "$OSTYPE" in
   *)       browser_open_default="xdg-open '%url'" ;;
 esac
 
-# Fetch Tmux options with defaults
-key=$(tmux_get '@fzf-links-key' 'C-h')
-history_lines=$(tmux_get '@fzf-links-history-lines' '0')
-editor_open_cmd=$(tmux_get '@fzf-links-editor-open-cmd' "tmux new-window -n 'vim' vim +%line '%file'")
-browser_open_cmd=$(tmux_get '@fzf-links-browser-open-cmd' "$browser_open_default")
-fzf_path=$(tmux_get '@fzf-links-fzf-path' 'fzf')
-fzf_display_options=$(tmux_get '@fzf-links-fzf-display-options' '-w 100% --maxnum-displayed 20 --multi --track --no-preview')
-path_extension=$(tmux_get '@fzf-links-path-extension' '')
-loglevel_tmux=$(tmux_get '@fzf-links-loglevel-tmux' 'WARNING')
-loglevel_file=$(tmux_get '@fzf-links-loglevel-file' 'DEBUG')
-log_filename=$(tmux_get '@fzf-links-log-filename' '')
-python=$(tmux_get '@fzf-links-python' 'python3')
-python_path=$(tmux_get '@fzf-links-python-path' '')
-use_colors=$(tmux_get '@fzf-links-use-colors' 'on')
-ls_colors_filename=$(tmux_get '@fzf-links-ls-colors-filename' '')
-user_schemes_path=$(tmux_get '@fzf-links-user-schemes-path' '')
-hide_fzf_header=$(tmux_get '@fzf-links-hide-fzf-header' 'DEPRECATED')
-hide_bottom_bar=$(tmux_get '@fzf-links-hide-bottom-bar' 'off') # deprecated option
+# Fetch Tmux options with defaults in a SINGLE call for performance (approx 5ms vs 80ms)
+# We use a unique separator to handle potentially empty options correctly.
+_bulk_options=$(tmux display-message -p \
+"#{@fzf-links-key}
+#{@fzf-links-history-lines}
+#{@fzf-links-editor-open-cmd}
+#{@fzf-links-browser-open-cmd}
+#{@fzf-links-fzf-path}
+#{@fzf-links-fzf-display-options}
+#{@fzf-links-path-extension}
+#{@fzf-links-loglevel-tmux}
+#{@fzf-links-loglevel-file}
+#{@fzf-links-log-filename}
+#{@fzf-links-python}
+#{@fzf-links-python-path}
+#{@fzf-links-use-colors}
+#{@fzf-links-ls-colors-filename}
+#{@fzf-links-user-schemes-path}
+#{@fzf-links-hide-fzf-header}
+#{@fzf-links-hide-bottom-bar}
+# We add END_MARKER to prevent Bash from stripping trailing empty lines from $(...),
+# which would misalign the subsequent 'read' commands.
+END_MARKER")
 
-# End profiling the entire script load time
-_prof_end=$EPOCHREALTIME
+# Map the bulk options to variables, providing defaults where empty
+{
+  read -r key
+  read -r history_lines
+  read -r editor_open_cmd
+  read -r browser_open_cmd
+  read -r fzf_path
+  read -r fzf_display_options
+  read -r path_extension
+  read -r loglevel_tmux
+  read -r loglevel_file
+  read -r log_filename
+  read -r python
+  read -r python_path
+  read -r use_colors
+  read -r ls_colors_filename
+  read -r user_schemes_path
+  read -r hide_fzf_header
+  read -r hide_bottom_bar
+} <<< "$_bulk_options"
 
-# Log the total load duration in milliseconds to ~/tmux-fzf-links.log
-# Note: This includes the time spent calling `tmux show` for options.
-python3 -c "print(f'$(date): Full plugin load took {int(($_prof_end - $_prof_start) * 1000)}ms')" >> ~/tmux-fzf-links.log
-
+# Apply defaults for empty values
+key=${key:-'C-h'}
+history_lines=${history_lines:-'0'}
+editor_open_cmd=${editor_open_cmd:-"tmux new-window -n 'vim' vim +%line '%file'"}
+browser_open_cmd=${browser_open_cmd:-"$browser_open_default"}
+fzf_path=${fzf_path:-'fzf'}
+fzf_display_options=${fzf_display_options:-'-w 100% --maxnum-displayed 20 --multi --track --no-preview'}
+path_extension=${path_extension:-''}
+loglevel_tmux=${loglevel_tmux:-'WARNING'}
+loglevel_file=${loglevel_file:-'DEBUG'}
+log_filename=${log_filename:-''}
+python=${python:-'python3'}
+python_path=${python_path:-''}
+use_colors=${use_colors:-'on'}
+ls_colors_filename=${ls_colors_filename:-''}
+user_schemes_path=${user_schemes_path:-''}
+hide_fzf_header=${hide_fzf_header:-'DEPRECATED'}
+hide_bottom_bar=${hide_bottom_bar:-'off'}
 
 # Expand variables to resolve ~ and environment variables (e.g. $HOME)
 expand_vars "$path_extension"; path_extension="$REPLY"
@@ -81,6 +103,13 @@ expand_vars "$fzf_path"; fzf_path="$REPLY"
 if python_resolved=$(command -v -- "$python" 2>/dev/null); then
   python="$python_resolved"
 fi
+
+# End profiling the entire script load time
+_prof_end=$EPOCHREALTIME
+
+# Log the total load duration in milliseconds to ~/tmux-fzf-links.log
+# Note: This includes the time spent calling `tmux show` for options.
+python3 -c "print(f'$(date): Full plugin load took {int(($_prof_end - $_prof_start) * 1000)}ms')" >> ~/tmux-fzf-links.log
 
 # Prebuild a fully quoted command line (safe for /bin/sh in run-shell)
 quote() { printf "%q" "$1"; }
