@@ -181,7 +181,7 @@ def spawn_daemon(cmd_plus_args: list[str]):
         if pid > 0:
             return  # Exit parent
     except OSError as e:
-        raise CommandFailed(f"First fork failed: {e}", file=sys.stderr)
+        raise CommandFailed(f"First fork failed: {e}")
         
     os.setsid()  # Create new session
 
@@ -190,7 +190,7 @@ def spawn_daemon(cmd_plus_args: list[str]):
         if pid > 0:
             os._exit(0)  # Exit second parent
     except OSError as e:
-        raise CommandFailed(f"Second fork failed: {e}", file=sys.stderr)
+        raise CommandFailed(f"Second fork failed: {e}")
         
     # Grandchild process — fully detached
     subprocess.Popen(
