@@ -1,6 +1,9 @@
-#!/usr/bin/env -S bash --noprofile --norc
+#!/usr/bin/env -S /opt/homebrew/bin/bash --noprofile --norc
 
 # Andrea Alberti, 2024
+
+# Start profiling the entire script load time
+_prof_start=$EPOCHREALTIME
 
 # Resolve the directory containing this script
 SCRIPT_DIR=${BASH_SOURCE[0]%/*}
@@ -20,13 +23,16 @@ tmux_get() {
   fi
 }
 
-# Safe "expand ~ and $VARS" without letting globbing bite us
+# Pure Bash expansion for ~ (Zero forks, zero subshells)
+# Set the result into $REPLY
 expand_vars() {
-  local s=$1 out
-  set -f                               # disable globbing (noglob)
-  out=$(builtin eval "printf '%s' \"$s\"")
-  set +f
-  printf '%s\n' "$out"
+  if [[ "$1" == "~/"* ]]; then
+      REPLY="${HOME}${1:1}"
+  elif [[ "$1" == "~" ]]; then
+      REPLY="${HOME}"
+  else
+      REPLY="$1"
+  fi
 }
 
 # Set browser open command default based on OS
@@ -54,13 +60,22 @@ user_schemes_path=$(tmux_get '@fzf-links-user-schemes-path' '')
 hide_fzf_header=$(tmux_get '@fzf-links-hide-fzf-header' 'DEPRECATED')
 hide_bottom_bar=$(tmux_get '@fzf-links-hide-bottom-bar' 'off') # deprecated option
 
+# End profiling the entire script load time
+_prof_end=$EPOCHREALTIME
+
+# Log the total load duration in milliseconds to ~/tmux-fzf-links.log
+# Note: This includes the time spent calling `tmux show` for options.
+python3 -c "print(f'$(date): Full plugin load took {int(($_prof_end - $_prof_start) * 1000)}ms')" >> ~/tmux-fzf-links.log
+
+
 # Expand variables to resolve ~ and environment variables (e.g. $HOME)
-path_extension=$(expand_vars "$path_extension")
-log_filename=$(expand_vars "$log_filename")
-python=$(expand_vars "$python")
-python_path=$(expand_vars "$python_path")
-ls_colors_filename=$(expand_vars "$ls_colors_filename")
-user_schemes_path=$(expand_vars "$user_schemes_path")
+expand_vars "$path_extension"; path_extension="$REPLY"
+expand_vars "$log_filename"; log_filename="$REPLY"
+expand_vars "$python"; python="$REPLY"
+expand_vars "$python_path"; python_path="$REPLY"
+expand_vars "$ls_colors_filename"; ls_colors_filename="$REPLY"
+expand_vars "$user_schemes_path"; user_schemes_path="$REPLY"
+expand_vars "$fzf_path"; fzf_path="$REPLY"
 
 # Resolve python to an absolute path if possible; fall back to the given string
 if python_resolved=$(command -v -- "$python" 2>/dev/null); then
