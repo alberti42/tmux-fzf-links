@@ -12,6 +12,8 @@ The default schemes include recognition of:
 
 The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmux-fzf-url).
 
+![tmux-fzf-links screenshot](images/screenshot-tmux-fzf-links.jpg)
+
 ---
 
 ## 🌟 Features
