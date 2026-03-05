@@ -93,14 +93,13 @@ $HOME/.tmux/plugins/tmux-fzf-links/fzf-links.tmux
 To install the plugin with [zinit](https://github.com/zdharma-continuum/zinit), add the following to your `.zshrc`:
 
 ```zsh
-zinit ice as'null' nocompile'!' depth=1 lucid wait
-zinit light @alberti42/tmux-fzf-links
+zinit lucid wait as'null' nocompile'!' from'gh-r' id-as'tmux-plugins/tmux-fzf-links' extract'!' @alberti42/tmux-fzf-links
 ```
 
-This configuration ensures the plugin is loaded with the turbo (delayed) option (`wait`) for optimized shell startup. After installation, the `.tmux` file `fzf-links.tmux` will be located at:
+This configuration downloads the plugin from GitHub Releases (no git clone required) and loads it with the turbo (delayed) option (`wait`) for optimized shell startup. After installation, the `.tmux` file `fzf-links.tmux` will be located at:
 
 ```plaintext
-$ZINIT_HOME/plugins/alberti42---tmux-fzf-links/fzf-links.tmux
+$ZINIT_HOME/plugins/tmux-plugins---tmux-fzf-links/fzf-links.tmux
 ```
 
 ### Manual Installation
@@ -128,7 +127,7 @@ run-shell "~/.tmux/plugins/tmux-fzf-links/fzf-links.tmux"
 or, if you used zinit,
 
 ```tmux
-run-shell "$ZINIT_HOME/plugins/alberti42---tmux-fzf-links/fzf-links.tmux"
+run-shell "$ZINIT_HOME/plugins/tmux-plugins---tmux-fzf-links/fzf-links.tmux"
 ```
 
 replacing `$ZINIT_HOME` with the actual value of your zinit home directory.
