@@ -14,8 +14,13 @@ if sys.version_info >= (3, 11):  # For Python 3.11 and newer
 elif sys.version_info < (3, 11):  # For Python 3.10
     pass
 import shlex
+import logging
 
 from .errors_types import CommandFailed, NoBrowserConfigured, NoEditorConfigured, NoSuitableAppFound, BinaryFileSelected, NotSupportedPlatform
+
+logger = logging.getLogger()  # root logger when no argument is provided
+# Allow all log messages to pass through; we control the level using handlers
+logger.setLevel(0)
 
 class OpenerType(Enum):
     EDITOR = 0
@@ -162,6 +167,9 @@ def spawn_daemon(cmd_plus_args: list[str]):
     # Targeted tilde expansion: only expand if an argument starts with ~/
     # This is safe and doesn't require complex shell-like evaluation.
     cmd_plus_args = [os.path.expanduser(arg) if arg.startswith('~/') else arg for arg in cmd_plus_args]
+
+    logger.debug(f"PATH={os.getenv('PATH')}")
+    logger.info(f"Spawn process arguments (cmd_plus_args)={cmd_plus_args}")
 
     if sys.platform == "win32":
         DETACHED_PROCESS = subprocess.DETACHED_PROCESS
