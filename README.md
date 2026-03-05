@@ -256,6 +256,12 @@ Comment out the options you find useful and replace the placeholders with approp
 
 10. **`@fzf-links-hide-fzf-bottom-bar`**: Hide the bottom bar with the instructions (`on` or `off`). Default: `off`.
 
+11. **Path expansion in option values**: tmux expands environment variables (e.g., `$HOME`, `$XDG_CONFIG_HOME`) when loading `tmux.conf`, so you can use them freely in any path-based option. The plugin additionally expands a leading `~/` for the options it processes. Both forms are therefore equivalent:
+    ```tmux
+    set-option -g @fzf-links-log-filename "$HOME/.cache/tmux-fzf-links/fzf-links.log"
+    set-option -g @fzf-links-log-filename "~/.cache/tmux-fzf-links/fzf-links.log"
+    ```
+
 ### Tmux popup borders
 
 By design, the tmux popup is shown with a border around it. We suggest customizing its appearance by adding to your `.tmux.conf`:
@@ -520,7 +526,7 @@ tmux source-file ~/.tmux.conf
   set-option -g @fzf-links-python "/path/to/python3"
   set-option -g @fzf-links-fzf-path "/path/to/fzf"
   ```
-- **Tilde (`~`) expansion**: The plugin surgically expands `~/` at the beginning of arguments in your command templates. For example, `~/.local/bin/my-editor` will be correctly resolved.
+- **Path expansion**: tmux expands environment variables such as `$HOME` in option values when loading `tmux.conf`. The plugin additionally expands a leading `~/` at runtime. Both `$HOME/...` and `~/...` are therefore valid in any path-based option. See also note 11 in the [Configuration Notes](#notes) section.
 - **Silent `tmux new-window` failures**: If your editor fails to open in a new window, it might be because the command provided to `tmux new-window` is incorrect. Since `tmux` reports success as long as it delivers the message to the server, these failures can be silent. Double-check your path and arguments in the log file.
 
 ### 3. Performance
