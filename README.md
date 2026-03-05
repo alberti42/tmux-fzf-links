@@ -25,6 +25,7 @@ The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmu
 - **Clipboard support**: By pressing `ctrl`-`c`, the selected items are copied to tmux buffer and your system's clipboard, instead of executing the configured actions.
 - **Default file association support**: By pressing `ctrl`-`d`, the selected items are opened based on the system's default file association (i.e., using `open` in macOS and `xdg-open` in Linux).
 - **File manager support**: By pressing `ctrl`-`r`, the selected items are revealed using the system's default file manager (`open` in macOS and `xdg-open` in Linux).
+- **Fast startup**: The plugin bootstraps in ~15 ms, mostly limited by the unavoidable round-trips to the tmux server.
 
 ### 🧩 Extensibility
 
