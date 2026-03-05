@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Ensure zsh is available
         run: |
@@ -27,20 +29,36 @@ jobs:
             sudo apt-get install -y zsh
           fi
 
+      - name: Resolve tag name
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "name=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build release zip
         run: |
           chmod +x bin/make-release-zip
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            zsh -f bin/make-release-zip "${{ inputs.tag }}"
-          else
-            zsh -f bin/make-release-zip "${{ github.ref_name }}"
+          zsh -f bin/make-release-zip "${{ steps.tag.outputs.name }}"
+
+      - name: Append changelog link to release notes
+        run: |
+          TAG="${{ steps.tag.outputs.name }}"
+          NOTES_FILE="release-notes/release-${TAG}.md"
+          REPO="${{ github.repository }}"
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${TAG}$" | head -1)
+
+          if [ -n "$PREV_TAG" ]; then
+            printf '\n**Full Changelog**: https://github.com/%s/compare/%s...%s\n' "$REPO" "$PREV_TAG" "$TAG" >> "$NOTES_FILE"
           fi
 
       - name: Create GitHub release and upload asset
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*.zip
-          generate_release_notes: true
+          body_path: release-notes/release-${{ steps.tag.outputs.name }}.md
           make_latest: true
           draft: true
           prerelease: false
