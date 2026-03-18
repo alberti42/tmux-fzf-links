@@ -58,7 +58,7 @@ def run_fzf(fzf_path:str, fzf_display_options: str, choices: list[str], use_ls_c
     # Parse user options into a list
     cmd_user_args: list[str] = shlex.split(fzf_display_options)
 
-    VER_BORDER = 6 + (0 if configs.hide_bottom_bar else 1)  # 2 tmux borders + 2 fzf borders + fzf info line + fzf prompt line + optional header
+    VER_BORDER = 4 + (0 if configs.hide_bottom_bar else 1)  # 2 tmux popup borders + fzf info line + fzf prompt line + optional header
     HOR_BORDER = 2 # number of characters taken by horizontal border
 
     # Command to launch tmux popup
@@ -128,7 +128,7 @@ def run_fzf(fzf_path:str, fzf_display_options: str, choices: list[str], use_ls_c
     tmux_popup_command.extend(["-h", f"{fzf_height}"])
 
     # Base fzf arguments
-    fzf_args = ['--no-sort','--bind','ctrl-c:print(COPY_TO_CLIPBOARD)+accept', '--bind', 'ctrl-r:print(REVEAL)+accept', '--bind', 'ctrl-d:print(SYSTEM_OPEN)+accept', '--bind', 'enter:print(OPEN)+accept']
+    fzf_args = ['--no-sort', '--bind','ctrl-c:print(COPY_TO_CLIPBOARD)+accept', '--bind', 'ctrl-r:print(REVEAL)+accept', '--bind', 'ctrl-d:print(SYSTEM_OPEN)+accept', '--bind', 'enter:print(OPEN)+accept']
     if use_ls_colors:
         fzf_args.append('--ansi')
 

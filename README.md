@@ -556,6 +556,10 @@ tmux source-file ~/.tmux.conf
 (or `~/.config/tmux/tmux.conf` depending on your setup) and check the log file after attempting to use the plugin.
 
 ### 2. Common Issues
+- **fzf popup height too small**: If the fzf popup cuts off items at the bottom, you likely have a `--border` option in `@fzf-links-fzf-display-options`. This commonly happens when the option is populated from `$FZF_DEFAULT_OPTS` without cleaning it up. Each fzf-level border consumes 2 extra lines that the plugin does not account for — `--border=none` is the fzf default and the right choice here, since the tmux popup already provides a border. If you populate `@fzf-links-fzf-display-options` from `$FZF_DEFAULT_OPTS` (for example inside a `ZAC_IO_CMD` script), strip the border option first:
+  ```zsh
+  "$(printf '%s' "$FZF_DEFAULT_OPTS" | sed -E 's/--border(=[^[:space:]]+)?[[:space:]]*//g')"
+  ```
 - **`$PATH` and environment variables**: The plugin inherits the environment of the tmux **server** process, which is fixed at the time tmux was started. Any `export` commands or shell initializations (e.g. `.zshrc`) run after tmux starts are not visible to the plugin. If a command is not found, use its full absolute path in the relevant option, or restart tmux after updating your environment. You can also inject a variable into the running tmux environment with `tmux set-environment`.
 - **`python3` or `fzf` not found**: Ensure these are in your `$PATH` at the time tmux starts. If they are installed in non-standard locations, set them explicitly:
   ```tmux
