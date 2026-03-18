@@ -232,6 +232,8 @@ Comment out the options you find useful and replace the placeholders with approp
 
    Default setting: `-w 100% --maxnum-displayed 15 --multi --track --no-preview`
 
+   This option is read at runtime on every key press, so changes take effect immediately — no need to re-source your tmux config. This means you can update it programmatically mid-session, for example to switch between dark and light `fzf` color schemes when your OS appearance changes.
+
 5. **`@fzf-links-history-lines`**: An integer number determining how many extra lines of history to consider.
 
 	Default setting: `0`
@@ -278,6 +280,34 @@ set-option -g popup-border-style "bg=#24273a,fg=#00bbff"
 ```
 
 Adjust the colors as you like them. Also, if you use customization themes, make sure to add these commands after the customization theme in your tmux, or else these settings will likely be overwritten by your theme.
+
+### Dynamic appearance switching
+
+Because `@fzf-links-fzf-display-options` is read at runtime (every time tmux-fzf-links is triggered), you can change it at any point during a tmux session and the next invocation of the plugin will pick up the new value automatically — no re-sourcing required.
+
+This pairs naturally with [zsh-appearance-control](https://github.com/alberti42/zsh-appearance-control), a zsh plugin that detects OS-level dark/light mode transitions and dispatches user-defined callbacks. The right hook for updating a tmux option is `ZAC_IO_CMD`: it runs once per appearance change, in the dispatcher, before any shell is signaled — exactly the right place for global I/O like `tmux set-option`.
+
+Create a small executable script, for example `~/.config/zac/io-cmd`:
+
+```zsh
+#!/bin/zsh
+is_dark=$1
+if (( is_dark )); then
+    tmux set-option -g @fzf-links-fzf-display-options \
+        "-w 100% --maxnum-displayed 20 --multi --track --no-preview --color=dark"
+else
+    tmux set-option -g @fzf-links-fzf-display-options \
+        "-w 100% --maxnum-displayed 20 --multi --track --no-preview --color=light"
+fi
+```
+
+Make it executable (`chmod +x ~/.config/zac/io-cmd`) and point `ZAC_IO_CMD` to it in your `.zshrc`:
+
+```zsh
+export ZAC_IO_CMD=~/.config/zac/io-cmd
+```
+
+With this setup, every time your OS (macOS or Linux) switches between dark and light mode, `zsh-appearance-control` runs the script once, the tmux option is updated, and the next time you open the fzf picker it will use the correct color scheme — with no manual intervention needed.
 
 ---
 
