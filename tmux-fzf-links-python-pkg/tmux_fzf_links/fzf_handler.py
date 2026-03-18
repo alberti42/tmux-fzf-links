@@ -58,7 +58,7 @@ def run_fzf(fzf_path:str, fzf_display_options: str, choices: list[str], use_ls_c
     # Parse user options into a list
     cmd_user_args: list[str] = shlex.split(fzf_display_options)
 
-    VER_BORDER = 4 + (0 if configs.hide_bottom_bar else 1)  # number of characters taken by vertical border
+    VER_BORDER = 6 + (0 if configs.hide_bottom_bar else 1)  # 2 tmux borders + 2 fzf borders + fzf info line + fzf prompt line + optional header
     HOR_BORDER = 2 # number of characters taken by horizontal border
 
     # Command to launch tmux popup
