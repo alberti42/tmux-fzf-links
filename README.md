@@ -168,26 +168,29 @@ Comment out the options you find useful and replace the placeholders with approp
 
 1. **`@fzf-links-editor-open-cmd`**: This option specifies the command for opening the editor. In the command, the placeholders `%file` and `%line` are automatically replaced with the fully-resolved file path and the line number, respectively. Note that in general editors have  different syntax to specify how to open a file at a given line.
 
-   To open a terminal-based editor, such as Emacs or Vim, use `tmux new-window` to ensure the editor opens in a new tmux window. Example:  
-   ```tmux
-   set-option -g @fzf-links-editor-open-cmd "tmux new-window -n 'emacs' /usr/local/bin/emacs +%line '%file'"
-   ```
+  To open a terminal-based editor, such as Emacs or Vim, use `tmux new-window` to ensure the editor opens in a new tmux window. Example:  
+  ```tmux
+  set-option -g @fzf-links-editor-open-cmd "tmux new-window -n 'emacs' /usr/local/bin/emacs +%line '%file'"
+  ```
 
-   Alternatively, you can open Emacs or Vim in the same tmux window from where you called the script by using a tmux popup window. Example:
-   ```tmux
-   set-option -g @fzf-links-editor-open-cmd "tmux popup -E -w 100% -h 100% /usr/local/bin/emacs +%line '%file'"
-   ```
-   You can customize the size of the popup window by choosing a different value than 100% (`-w`) for the width and height (`-h`).
+  Alternatively, you can open Emacs or Vim in the same tmux window from where you called the script by using a tmux popup window. Example:
+  ```tmux
+  set-option -g @fzf-links-editor-open-cmd "tmux popup -E -w 100% -h 100% /usr/local/bin/emacs +%line '%file'"
+  ```
+  You can customize the size of the popup window by choosing a different value than 100% (`-w`) for the width and height (`-h`).
 
-   For desktop applications, such as Sublime Text, you can directly provide the path to the editor. Example:  
-   ```tmux
-   set-option -g @fzf-links-editor-open-cmd '/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl'
-   ```
+  For desktop applications, such as Sublime Text, you can directly provide the path to the editor. Example:  
+  ```tmux
+  set-option -g @fzf-links-editor-open-cmd '/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl'
+  ```
 
-   If your $EDITOR variable is already configured before you star tmux server, then you could also use it to define `@fzf-links-editor-open-cmd`. However, keep in mind that different editors use different syntaxex to designate the line number; thus, adjust the example as it fits to your editor:
+  If your $EDITOR variable is already configured before you start tmux server, then you could also use to define `@fzf-links-editor-open-cmd`:
 	```tmux
 	set-option -g @fzf-links-editor-open-cmd "$EDITOR '%file':%line"
 	```
+  However, keep in mind that different editors use different syntaxes to designate the line number; thus, adjust the example as it fits to your editor.
+
+  The `$PATH` and all environment variables available to the plugin are those inherited by the tmux **server** at the time it was started — not the current shell's environment. If a tool (editor, browser, `fzf`, `python3`) is not found, either use its full absolute path in the option value, or ensure it is in `$PATH` before starting tmux. Changes made inside a running shell session (e.g. via `.zshrc` modifications or `export` commands) will not be visible to the plugin unless tmux is restarted or the variable is explicitly added with `tmux set-environment`.
 
 	If you prefer to maintain a single configuration file `.tmux.conf` across different platforms, you can use a conditional statement as in the example below. This sets both the editor and browser commands with a single OS check:
 	```tmux
@@ -523,7 +526,8 @@ tmux source-file ~/.tmux.conf
 (or `~/.config/tmux/tmux.conf` depending on your setup) and check the log file after attempting to use the plugin.
 
 ### 2. Common Issues
-- **`python3` or `fzf` not found**: Ensure these are in your `$PATH`. If they are installed in non-standard locations, set them explicitly:
+- **`$PATH` and environment variables**: The plugin inherits the environment of the tmux **server** process, which is fixed at the time tmux was started. Any `export` commands or shell initializations (e.g. `.zshrc`) run after tmux starts are not visible to the plugin. If a command is not found, use its full absolute path in the relevant option, or restart tmux after updating your environment. You can also inject a variable into the running tmux environment with `tmux set-environment`.
+- **`python3` or `fzf` not found**: Ensure these are in your `$PATH` at the time tmux starts. If they are installed in non-standard locations, set them explicitly:
   ```tmux
   set-option -g @fzf-links-python "/path/to/python3"
   set-option -g @fzf-links-fzf-path "/path/to/fzf"
