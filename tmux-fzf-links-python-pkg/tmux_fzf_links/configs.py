@@ -6,6 +6,7 @@
 
 import logging
 import os
+import subprocess
 
 class ConfigurationManager:
     """Parse the configurations and assert their validity"""
@@ -28,6 +29,7 @@ class ConfigurationManager:
             self.browser_open_cmd:str = ""
             self.fzf_path:str = "fzf"
             self.fzf_display_options:str = ""
+            self.other_colors:str = ""
             self.path_extension:str = ""
             self.loglevel_tmux:int = logging.WARNING
             self.loglevel_file:int = logging.DEBUG
@@ -55,7 +57,6 @@ class ConfigurationManager:
             editor_open_cmd:str,
             browser_open_cmd:str,
             fzf_path:str,
-            fzf_display_options:str,
             path_extension:str,
             loglevel_tmux:int,
             loglevel_file:int,
@@ -76,7 +77,6 @@ class ConfigurationManager:
         self.editor_open_cmd = editor_open_cmd
         self.browser_open_cmd = browser_open_cmd
         self.fzf_path = fzf_path
-        self.fzf_display_options = fzf_display_options
         self.path_extension = path_extension
         self.loglevel_tmux = loglevel_tmux
         self.loglevel_file = loglevel_file
@@ -107,6 +107,26 @@ class ConfigurationManager:
 
         # Determine max supported length for filenames
         self.max_path_length = self.check_filename_length('/')
+
+    def load_dynamic_options(self):
+        """Read options that must reflect the current tmux state at runtime."""
+        try:
+            result = subprocess.check_output(
+                ['tmux', 'display-message', '-p',
+                 '#{@fzf-links-fzf-display-options}\x1f#{@fzf-links-other-colors}'],
+                text=True,
+                shell=False,
+            )
+            lines = result.split('\x1f')
+            fzf_display_options = lines[0] if len(lines) > 0 else ''
+            other_colors        = lines[1] if len(lines) > 1 else ''
+        except Exception as e:
+            self.logger.warning(f"Could not read dynamic tmux options: {e}")
+            fzf_display_options = ''
+            other_colors = ''
+
+        self.fzf_display_options = fzf_display_options or '-w 100% --maxnum-displayed 20 --multi --track --no-preview'
+        self.other_colors = other_colors
 
 # Instantiate the singleton class
 configs = ConfigurationManager()

@@ -31,7 +31,6 @@ _bulk_options=$(tmux display-message -p \
 #{@fzf-links-editor-open-cmd}
 #{@fzf-links-browser-open-cmd}
 #{@fzf-links-fzf-path}
-#{@fzf-links-fzf-display-options}
 #{@fzf-links-path-extension}
 #{@fzf-links-loglevel-tmux}
 #{@fzf-links-loglevel-file}
@@ -54,7 +53,6 @@ END_MARKER")
   read -r editor_open_cmd
   read -r browser_open_cmd
   read -r fzf_path
-  read -r fzf_display_options
   read -r path_extension
   read -r loglevel_tmux
   read -r loglevel_file
@@ -74,7 +72,6 @@ history_lines=${history_lines:-'0'}
 editor_open_cmd=${editor_open_cmd:-"tmux new-window -n 'vim' vim +%line '%file'"}
 browser_open_cmd=${browser_open_cmd:-"$browser_open_default"}
 fzf_path=${fzf_path:-'fzf'}
-fzf_display_options=${fzf_display_options:-'-w 100% --maxnum-displayed 20 --multi --track --no-preview'}
 path_extension=${path_extension:-''}
 loglevel_tmux=${loglevel_tmux:-'WARNING'}
 loglevel_file=${loglevel_file:-'DEBUG'}
@@ -109,7 +106,7 @@ PYENV="PYTHONPATH=$SCRIPT_DIR/tmux-fzf-links-python-pkg:$python_path"
 args=(
   -m tmux_fzf_links
   "$history_lines" "$editor_open_cmd" "$browser_open_cmd"
-  "$fzf_path" "$fzf_display_options" "$path_extension"
+  "$fzf_path" "$path_extension"
   "$loglevel_tmux" "$loglevel_file" "$log_filename"
   "$user_schemes_path" "$use_colors" "$ls_colors_filename"
   "$hide_bottom_bar" "$hide_fzf_header"

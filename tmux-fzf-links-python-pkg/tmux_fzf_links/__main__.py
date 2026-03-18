@@ -71,7 +71,6 @@ def run(
         editor_open_cmd:str,
         browser_open_cmd:str,
         fzf_path:str,
-        fzf_display_options:str,
         path_extension:str,
         loglevel_tmux:str,
         loglevel_file:str,
@@ -90,7 +89,6 @@ def run(
         editor_open_cmd,
         browser_open_cmd,
         fzf_path,
-        fzf_display_options,
         path_extension,
         tmux_log_handler.level,
         file_log_handler.level if file_log_handler else 0, # pass 0 if file logging is not needed
@@ -99,7 +97,9 @@ def run(
         use_ls_colors_str,
         ls_colors_filename,
         hide_bottom_bar,
-        hide_fzf_header)    
+        hide_fzf_header)
+
+    configs.load_dynamic_options()
 
     # Add extra path if provided
     if path_extension and path_extension not in os.environ["PATH"]:
