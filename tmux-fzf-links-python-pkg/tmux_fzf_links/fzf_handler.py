@@ -144,7 +144,7 @@ def run_fzf(fzf_path:str, fzf_display_options: str, choices: list[str], use_ls_c
             meta_key = "meta"  # symbol: ◆ 
             explorer = "explorer"
 
-        fzf_args.extend(['--header',f"↵ to open with configured opener, ^-d to open with system's default opener, ^+r to reveal in {explorer}, ^+c to copy to tmux buffer"])
+        fzf_args.extend(['--header',f"↵ to open with configured opener, ^-d to open with system's default opener, ^-r to reveal in {explorer}, ^-c to copy to tmux buffer"])
 
     # Combine fzf arguments, giving user options higher priority
     cmd_args = fzf_args + cmd_user_args
