@@ -261,7 +261,7 @@ Comment out the options you find useful and replace the placeholders with approp
    - `@fzf-links-loglevel-file`: Set log verbosity for file logs. Default: `DEBUG`
    - `@fzf-links-log-filename`: Specify the log file location. Omit this property or set it to an empty string to prevent logging to file. Default: `""`
 
-10. **`@fzf-links-hide-fzf-bottom-bar`**: Hide the bottom bar with the instructions (`on` or `off`). Default: `off`.
+10. **`@fzf-links-hide-bottom-bar`**: Hide the bottom bar with the instructions (`on` or `off`). Default: `off`.
 
 11. **Path expansion in option values**: tmux expands environment variables (e.g., `$HOME`, `$XDG_CONFIG_HOME`) when loading `tmux.conf`, so you can use them freely in any path-based option. The plugin additionally expands a leading `~/` for the options it processes. Both forms are therefore equivalent:
     ```tmux
