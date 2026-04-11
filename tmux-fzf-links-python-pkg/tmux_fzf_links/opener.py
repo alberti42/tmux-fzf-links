@@ -224,7 +224,7 @@ def spawn_daemon(cmd_plus_args: list[str]):
         CREATE_NEW_PROCESS_GROUP = subprocess.CREATE_NEW_PROCESS_GROUP
 
         try:
-            subprocess.Popen(
+            _ = subprocess.Popen(
                 cmd_plus_args,
                 creationflags=DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
                 stdin=subprocess.DEVNULL,
@@ -253,7 +253,7 @@ def spawn_daemon(cmd_plus_args: list[str]):
         raise CommandFailed(f"Second fork failed: {e}")
 
     # Grandchild process — fully detached
-    subprocess.Popen(
+    _ = subprocess.Popen(
         cmd_plus_args,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
@@ -324,22 +324,24 @@ def open_link(
                     )
             case OpenerType.REVEAL:
                 if "file" in post_handled_match:
-                    if util_cmd := get_reveal_util():
-                        template = util_cmd
-                        cmd_plus_args = shlex.split(
-                            template.replace(f"%file", post_handled_match["file"])
-                        )
+                    util_cmd = get_reveal_util()
+                    if util_cmd is None:
+                        raise NoSuitableAppFound("no utility found to reveal the file")
+                    cmd_plus_args = shlex.split(
+                        util_cmd.replace("%file", post_handled_match["file"])
+                    )
                 else:
                     raise RuntimeError(
                         "'post_handled_match' is not compatible with type: PostHandledMatchFileType"
                     )
             case OpenerType.SYSTEM_OPEN:
                 if "file" in post_handled_match:
-                    if util_cmd := get_system_open_util():
-                        template = util_cmd
-                        cmd_plus_args = shlex.split(
-                            template.replace(f"%file", post_handled_match["file"])
-                        )
+                    util_cmd = get_system_open_util()
+                    if util_cmd is None:
+                        raise NoSuitableAppFound("no utility found to open the file")
+                    cmd_plus_args = shlex.split(
+                        util_cmd.replace("%file", post_handled_match["file"])
+                    )
                 else:
                     raise RuntimeError(
                         "'post_handled_match' is not compatible with type: PostHandledMatchFileType"
@@ -350,8 +352,8 @@ def open_link(
     try:
         spawn_daemon(cmd_plus_args)
 
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         raise CommandFailed(f'could not find "{cmd_plus_args[0]}" in the path')
 
-    except Exception as e:
+    except Exception:
         raise CommandFailed(f'failed to execute command "{" ".join(cmd_plus_args)}"')
