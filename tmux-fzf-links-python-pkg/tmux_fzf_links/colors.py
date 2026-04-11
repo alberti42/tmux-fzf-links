@@ -22,6 +22,7 @@ class ColorsSingletonCls:
     tag_color: str = ""  # fallback case
     index_color: str = ""  # fallback case
     reset_color: str = ""  # fallback case
+    dash_color: str = ""  # fallback case
 
     def __new__(cls):
         if cls._instance is None:

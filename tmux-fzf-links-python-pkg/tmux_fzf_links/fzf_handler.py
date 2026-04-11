@@ -67,7 +67,7 @@ def run_fzf(
     fzf_path: str,
     fzf_display_options: str,
     choices: list[str],
-    use_ls_colors: bool,
+    use_colors: bool,
     pane_height: int,
     pane_width: int,
 ) -> FzfReturnType:
@@ -170,7 +170,7 @@ def run_fzf(
         "--bind",
         "enter:print(OPEN)+accept",
     ]
-    if use_ls_colors:
+    if use_colors:
         fzf_args.append("--ansi")
 
     if not configs.hide_bottom_bar:

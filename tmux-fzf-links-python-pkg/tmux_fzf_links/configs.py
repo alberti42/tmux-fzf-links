@@ -13,7 +13,7 @@ class ConfigurationManager:
     """Parse the configurations and assert their validity"""
 
     _instance = None
-    _initialized = False
+    _initialized: bool = False
 
     def __new__(cls):
         if cls._instance is None:
@@ -23,7 +23,7 @@ class ConfigurationManager:
 
     def __init__(self):
         if self._initialized is False:
-            self._initialize = True
+            self._initialize: bool = True
 
             self.history_lines: int = 0
             self.editor_open_cmd: str = ""
@@ -34,12 +34,12 @@ class ConfigurationManager:
             self.path_extension: str = ""
             self.loglevel_tmux: int = logging.WARNING
             self.loglevel_file: int = logging.DEBUG
-            self.log_filename = ""
-            self.user_schemes_path = ""
-            self.use_ls_colors_str = ""
-            self.ls_colors_filename = ""
+            self.log_filename: str = ""
+            self.user_schemes_path: str = ""
+            self.use_colors: bool = True
+            self.ls_colors_filename: str = ""
             self.hide_bottom_bar: bool = False
-            self.max_path_length = 0
+            self.max_path_length: int = 0
 
             # Root logger
             self.logger: logging.Logger = logging.getLogger()
@@ -64,7 +64,7 @@ class ConfigurationManager:
         loglevel_file: int,
         log_filename: str,
         user_schemes_path: str,
-        use_ls_colors_str: str,
+        use_colors_str: str,
         ls_colors_filename: str,
         hide_bottom_bar: str,
         hide_fzf_header: str,
@@ -87,15 +87,15 @@ class ConfigurationManager:
         self.log_filename = log_filename
         self.user_schemes_path = user_schemes_path
 
-        if use_ls_colors_str == "on":
-            self.use_ls_colors_str = True
-        elif use_ls_colors_str == "off":
-            self.use_ls_colors_str = False
+        if use_colors_str == "on":
+            self.use_colors = True
+        elif use_colors_str == "off":
+            self.use_colors = False
         else:
             self.logger.warning(
-                f"Input parameter '@fzf-links-use-colors' must either be 'on' or 'off', while it was provided: '{use_ls_colors_str}'"
+                f"Input parameter '@fzf-links-use-colors' must either be 'on' or 'off', while it was provided: '{use_colors_str}'"
             )
-            self.use_ls_colors_str = False  # default
+            self.use_colors = True  # default
 
         self.ls_colors_filename = ls_colors_filename
 

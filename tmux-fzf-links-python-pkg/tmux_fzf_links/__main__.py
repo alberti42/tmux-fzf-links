@@ -108,7 +108,7 @@ def run(
     loglevel_file: str,
     log_filename: str,
     user_schemes_path: str,
-    use_ls_colors_str: str,
+    use_colors_str: str,
     ls_colors_filename: str,
     hide_bottom_bar: str,
     hide_fzf_header: str,
@@ -131,7 +131,7 @@ def run(
         else 0,  # pass 0 if file logging is not needed
         log_filename,
         user_schemes_path,
-        use_ls_colors_str,
+        use_colors_str,
         ls_colors_filename,
         hide_bottom_bar,
         hide_fzf_header,
@@ -144,8 +144,7 @@ def run(
         os.environ["PATH"] = f"{path_extension}:{os.environ['PATH']}"
 
     # Configure LS_COLORS
-    if use_ls_colors_str and use_ls_colors_str == "on":
-        colors.enable_colors(True)
+    colors.enable_colors(configs.use_colors)
 
     if colors.enabled:
         if ls_colors_filename:
