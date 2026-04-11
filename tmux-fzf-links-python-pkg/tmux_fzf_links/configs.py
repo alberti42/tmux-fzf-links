@@ -1,12 +1,13 @@
 # configs.py
 
-#===============================================================================
+# ===============================================================================
 #   Author: (c) 2024 Andrea Alberti
-#===============================================================================
+# ===============================================================================
 
 import logging
 import os
 import subprocess
+
 
 class ConfigurationManager:
     """Parse the configurations and assert their validity"""
@@ -17,33 +18,33 @@ class ConfigurationManager:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            
+
         return cls._instance
 
     def __init__(self):
         if self._initialized is False:
             self._initialize = True
 
-            self.history_lines:int = 0
-            self.editor_open_cmd:str = ""
-            self.browser_open_cmd:str = ""
-            self.fzf_path:str = "fzf"
-            self.fzf_display_options:str = ""
-            self.other_colors:str = ""
-            self.path_extension:str = ""
-            self.loglevel_tmux:int = logging.WARNING
-            self.loglevel_file:int = logging.DEBUG
+            self.history_lines: int = 0
+            self.editor_open_cmd: str = ""
+            self.browser_open_cmd: str = ""
+            self.fzf_path: str = "fzf"
+            self.fzf_display_options: str = ""
+            self.other_colors: str = ""
+            self.path_extension: str = ""
+            self.loglevel_tmux: int = logging.WARNING
+            self.loglevel_file: int = logging.DEBUG
             self.log_filename = ""
             self.user_schemes_path = ""
             self.use_ls_colors_str = ""
             self.ls_colors_filename = ""
-            self.hide_bottom_bar:bool = False
+            self.hide_bottom_bar: bool = False
             self.max_path_length = 0
 
             # Root logger
-            self.logger:logging.Logger = logging.getLogger()
+            self.logger: logging.Logger = logging.getLogger()
 
-    def check_filename_length(self,directory:str) -> int: 
+    def check_filename_length(self, directory: str) -> int:
         try:
             max_path_length = os.pathconf(directory, "PC_NAME_MAX")
             return max_path_length
@@ -52,27 +53,30 @@ class ConfigurationManager:
             # return default 128 characters as a conservative backfall scenario
             return 128
 
-    def initialize(self,
-            history_lines:str,
-            editor_open_cmd:str,
-            browser_open_cmd:str,
-            fzf_path:str,
-            path_extension:str,
-            loglevel_tmux:int,
-            loglevel_file:int,
-            log_filename:str,
-            user_schemes_path:str,
-            use_ls_colors_str:str,
-            ls_colors_filename:str,
-            hide_bottom_bar:str,
-            hide_fzf_header:str
-        ):
+    def initialize(
+        self,
+        history_lines: str,
+        editor_open_cmd: str,
+        browser_open_cmd: str,
+        fzf_path: str,
+        path_extension: str,
+        loglevel_tmux: int,
+        loglevel_file: int,
+        log_filename: str,
+        user_schemes_path: str,
+        use_ls_colors_str: str,
+        ls_colors_filename: str,
+        hide_bottom_bar: str,
+        hide_fzf_header: str,
+    ):
 
         try:
             self.history_lines = int(history_lines)
         except ValueError as e:
-            self.logger.warning(f"Input parameter '@fzf-links-history-lines' must be a positive integer: {e}")
-            self.history_lines = 0 # default
+            self.logger.warning(
+                f"Input parameter '@fzf-links-history-lines' must be a positive integer: {e}"
+            )
+            self.history_lines = 0  # default
 
         self.editor_open_cmd = editor_open_cmd
         self.browser_open_cmd = browser_open_cmd
@@ -83,50 +87,64 @@ class ConfigurationManager:
         self.log_filename = log_filename
         self.user_schemes_path = user_schemes_path
 
-        if use_ls_colors_str == 'on':
+        if use_ls_colors_str == "on":
             self.use_ls_colors_str = True
-        elif use_ls_colors_str == 'off':
+        elif use_ls_colors_str == "off":
             self.use_ls_colors_str = False
         else:
-            self.logger.warning(f"Input parameter '@fzf-links-use-colors' must either be 'on' or 'off', while it was provided: '{use_ls_colors_str}'")
-            self.use_ls_colors_str = False # default
-        
+            self.logger.warning(
+                f"Input parameter '@fzf-links-use-colors' must either be 'on' or 'off', while it was provided: '{use_ls_colors_str}'"
+            )
+            self.use_ls_colors_str = False  # default
+
         self.ls_colors_filename = ls_colors_filename
 
-        if hide_fzf_header != 'DEPRECATED':
-           hide_bottom_bar = hide_fzf_header
-           self.logger.warning(f"Please rename deprecated tmux variable '@fzf-links-hide-fzf-header' to 'fzf-links-hide-fzf-header' {hide_fzf_header}")
+        if hide_fzf_header != "DEPRECATED":
+            hide_bottom_bar = hide_fzf_header
+            self.logger.warning(
+                f"Please rename deprecated tmux variable '@fzf-links-hide-fzf-header' to 'fzf-links-hide-fzf-header' {hide_fzf_header}"
+            )
 
-        if hide_bottom_bar == 'on':
+        if hide_bottom_bar == "on":
             self.hide_bottom_bar = True
-        elif hide_bottom_bar == 'off':
+        elif hide_bottom_bar == "off":
             self.hide_bottom_bar = False
         else:
-            self.logger.warning(f"Input parameter '@fzf-links-hide-bottom-bar' must either be 'on' or 'off', while it was provided: '{hide_bottom_bar}'")
-            self.hide_bottom_bar = False # default
+            self.logger.warning(
+                f"Input parameter '@fzf-links-hide-bottom-bar' must either be 'on' or 'off', while it was provided: '{hide_bottom_bar}'"
+            )
+            self.hide_bottom_bar = False  # default
 
         # Determine max supported length for filenames
-        self.max_path_length = self.check_filename_length('/')
+        self.max_path_length = self.check_filename_length("/")
 
     def load_dynamic_options(self):
         """Read options that must reflect the current tmux state at runtime."""
         try:
             result = subprocess.check_output(
-                ['tmux', 'display-message', '-p',
-                 '#{@fzf-links-fzf-display-options}\x1f#{@fzf-links-other-colors}'],
+                [
+                    "tmux",
+                    "display-message",
+                    "-p",
+                    "#{@fzf-links-fzf-display-options}\x1f#{@fzf-links-other-colors}",
+                ],
                 text=True,
                 shell=False,
             )
-            lines = result.split('\x1f')
-            fzf_display_options = lines[0] if len(lines) > 0 else ''
-            other_colors        = lines[1] if len(lines) > 1 else ''
+            lines = result.split("\x1f")
+            fzf_display_options = lines[0] if len(lines) > 0 else ""
+            other_colors = lines[1] if len(lines) > 1 else ""
         except Exception as e:
             self.logger.warning(f"Could not read dynamic tmux options: {e}")
-            fzf_display_options = ''
-            other_colors = ''
+            fzf_display_options = ""
+            other_colors = ""
 
-        self.fzf_display_options = fzf_display_options or '-w 100% --maxnum-displayed 20 --multi --track --no-preview'
+        self.fzf_display_options = (
+            fzf_display_options
+            or "-w 100% --maxnum-displayed 20 --multi --track --no-preview"
+        )
         self.other_colors = other_colors
+
 
 # Instantiate the singleton class
 configs = ConfigurationManager()

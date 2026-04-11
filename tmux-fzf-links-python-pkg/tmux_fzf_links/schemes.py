@@ -1,15 +1,16 @@
-#===============================================================================
+# ===============================================================================
 #   Author: (c) 2024 Andrea Alberti
-#===============================================================================
+# ===============================================================================
 
+import errno
 from os.path import expanduser
 from pathlib import Path
-import errno
 
-def heuristic_find_file(file_path_str:str) -> Path | None:
 
-    try:            
-        # Expand tilde (~) to the user's home directory    
+def heuristic_find_file(file_path_str: str) -> Path | None:
+
+    try:
+        # Expand tilde (~) to the user's home directory
         file_path = Path(expanduser(file_path_str))
         # Check if the file exists either as is or relative to the current directory
         if file_path.exists():
@@ -23,5 +24,6 @@ def heuristic_find_file(file_path_str:str) -> Path | None:
             return None
         else:
             raise e
+
 
 __all__ = ["heuristic_find_file"]

@@ -1,10 +1,13 @@
 # logging.py
 
-#===============================================================================
+# ===============================================================================
 #   Author: (c) 2024 Andrea Alberti
-#===============================================================================
+# ===============================================================================
 
+import logging
+import subprocess
 import sys
+
 if sys.version_info >= (3, 12):  # For Python 3.12 and newer
     from typing import override
 elif sys.version_info < (3, 12):  # For Python 3.8 and older
@@ -12,21 +15,22 @@ elif sys.version_info < (3, 12):  # For Python 3.8 and older
     def override(method):
         return method
 
-import logging
-import subprocess
 
 from .errors_types import FileLoggingNotAllow
 
+
 class TmuxDisplayHandler(logging.Handler):
     @override
-    def emit(self, record:logging.LogRecord):
+    def emit(self, record: logging.LogRecord):
         # Format the log message
         message = self.format(record)
         try:
             # Determine the display command options based on the log level
             display_options = ["tmux", "display-message"]
             if record.levelno >= logging.WARNING:
-                display_options.extend(["-d", "0"])  # Pause the message for warnings and errors
+                display_options.extend(
+                    ["-d", "0"]
+                )  # Pause the message for warnings and errors
 
             # Include the message
             display_options.append(message)
@@ -44,7 +48,9 @@ class TmuxDisplayHandler(logging.Handler):
             print(f"Failed to display message in tmux: {e}")
 
 
-def set_up_logger(loglevel_tmux:str,loglevel_file:str,log_filename:str) -> tuple[logging.Logger, TmuxDisplayHandler, logging.FileHandler | None]:
+def set_up_logger(
+    loglevel_tmux: str, loglevel_file: str, log_filename: str
+) -> tuple[logging.Logger, TmuxDisplayHandler, logging.FileHandler | None]:
 
     # Set up the root logger; note: if you decide to create a child logger
     # the root logger level needs to be configured to allow for messages
@@ -57,18 +63,19 @@ def set_up_logger(loglevel_tmux:str,loglevel_file:str,log_filename:str) -> tuple
     tmux_handler = setup_tmux_log_handler()
     tmux_handler.setLevel(validate_log_level(loglevel_tmux))
     logger.addHandler(tmux_handler)
-    
-    file_handler: logging.FileHandler|None = None
+
+    file_handler: logging.FileHandler | None = None
     if log_filename:
         # Set up file log handler in a safe way where it checks whether
-        # the file is writable; if not, the error is reported over tmux display 
+        # the file is writable; if not, the error is reported over tmux display
         try:
             file_handler = setup_file_log_handler(log_filename)
             file_handler.setLevel(validate_log_level(loglevel_file))
             logger.addHandler(file_handler)
-            init_msg="fzf-links tmux plugin started"
+            init_msg = "fzf-links tmux plugin started"
             # Send an initialization message to the file handler only
-            file_handler.handle(logging.LogRecord(
+            file_handler.handle(
+                logging.LogRecord(
                     name=logger.name,
                     level=logging.INFO,
                     pathname=__file__,
@@ -76,24 +83,32 @@ def set_up_logger(loglevel_tmux:str,loglevel_file:str,log_filename:str) -> tuple
                     msg=init_msg,
                     args=None,
                     exc_info=None,
-                ))
+                )
+            )
         except Exception as e:
             # To be safe, remove the handler if it was added
             for handler in logger.handlers:
-                if isinstance(handler,logging.FileHandler):
+                if isinstance(handler, logging.FileHandler):
                     logger.removeHandler(handler)
-                
-            # Set level to zero to make sure that the error is displayed 
-            tmux_handler.setLevel(0)
-            # Log the error to tmux display and exit 
-            raise FileLoggingNotAllow(f"error: logging to file not allowed. Check you have permissions to write to logfile: {log_filename}")
 
-    return (logger, tmux_handler, file_handler,)
+            # Set level to zero to make sure that the error is displayed
+            tmux_handler.setLevel(0)
+            # Log the error to tmux display and exit
+            raise FileLoggingNotAllow(
+                f"error: logging to file not allowed. Check you have permissions to write to logfile: {log_filename}"
+            )
+
+    return (
+        logger,
+        tmux_handler,
+        file_handler,
+    )
+
 
 def setup_tmux_log_handler() -> TmuxDisplayHandler:
 
     # === Set up tmux logger ===
-    
+
     # Create and add the TmuxDisplayHandler
     tmux_handler = TmuxDisplayHandler()
     # formatter = logging.Formatter("%(levelname)s: %(message)s")
@@ -102,19 +117,21 @@ def setup_tmux_log_handler() -> TmuxDisplayHandler:
 
     return tmux_handler
 
-def setup_file_log_handler(log_filename:str='') -> logging.FileHandler:
+
+def setup_file_log_handler(log_filename: str = "") -> logging.FileHandler:
 
     # === Set up file logger ===
 
     # Configure file log handler and check that the logfile can be written
     file_handler = logging.FileHandler(log_filename)
-    file_handler.setFormatter(logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    ))
-    
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    )
+
     return file_handler
 
-def validate_log_level(user_level:str):
+
+def validate_log_level(user_level: str):
     """
     Validates the user-provided log level.
     Falls back to WARNING if the level is invalid.
@@ -129,9 +146,10 @@ def validate_log_level(user_level:str):
     level_mapping = logging._nameToLevel
 
     # Convert user input to uppercase for case-insensitive matching
-    level = user_level.upper() if isinstance(user_level, str) else ''
-    
+    level = user_level.upper() if isinstance(user_level, str) else ""
+
     # Return the corresponding logging level or fallback to WARNING
     return level_mapping.get(level, logging.WARNING)
 
-__all__ = [ "set_up_logger" ]
+
+__all__ = ["set_up_logger"]
