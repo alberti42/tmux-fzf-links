@@ -1,0 +1,4 @@
+{
+  "reportUnreachable": "none",
+  "reportOptionalSubscript": "error"
+}
