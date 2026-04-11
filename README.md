@@ -238,7 +238,11 @@ Comment out the options you find useful and replace the placeholders with approp
 
 	Default setting: `0`
 
-6. **`@fzf-links-ls-colors-filename`**: A file containing the content of $LS_COLORS. For example, you can save $LS_COLORS to a cached file using:
+6. **`@fzf-links-use-colors`**: Enable or disable ANSI color highlighting in the fzf picker (`on` or `off`). When enabled, file paths in the list are colorized using `$LS_COLORS` and fzf is invoked with `--ansi` to render the colors. Disable this if your terminal does not support ANSI colors or if you prefer a plain listing.
+
+   Default setting: `on`
+
+7. **`@fzf-links-ls-colors-filename`**: A file containing the content of $LS_COLORS. For example, you can save $LS_COLORS to a cached file using:
 	 ```bash
 	 printenv LS_COLORS > cached_ls_colors.txt
 	 ```
@@ -247,23 +251,23 @@ Comment out the options you find useful and replace the placeholders with approp
 
 	Default setting: `""`
 
-7. **`@fzf-links-path-extension`**: This option is also not strictly necessary. It is only required if `fzf-tmux` or `tmux` binaries are not in the `$PATH` that was available when `tmux` started. The plugin only requires these two processes.
-    
-   Default setting: `""`
-
-8. **`@fzf-links-python`** and **`@fzf-links-python-path`**: These two options allow specifying the path to the Python interpreter and, if needed, to a Python `site-packages` directory, which is appended to `$PYTHONPATH`. The plugin does not rely on any external dependencies. However, you may want to import external modules installed in `site-packages` to extend the functionality of the plugin in `user_schemes`.
+8. **`@fzf-links-path-extension`**: This option is also not strictly necessary. It is only required if `fzf-tmux` or `tmux` binaries are not in the `$PATH` that was available when `tmux` started. The plugin only requires these two processes.
 
    Default setting: `""`
 
-9. 🔍 **Logging**: Control logging levels via these options:
+9. **`@fzf-links-python`** and **`@fzf-links-python-path`**: These two options allow specifying the path to the Python interpreter and, if needed, to a Python `site-packages` directory, which is appended to `$PYTHONPATH`. The plugin does not rely on any external dependencies. However, you may want to import external modules installed in `site-packages` to extend the functionality of the plugin in `user_schemes`.
+
+   Default setting: `""`
+
+10. 🔍 **Logging**: Control logging levels via these options:
 
    - `@fzf-links-loglevel-tmux`: Adjust tmux log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`). Default: `WARNING`
    - `@fzf-links-loglevel-file`: Set log verbosity for file logs. Default: `DEBUG`
    - `@fzf-links-log-filename`: Specify the log file location. Omit this property or set it to an empty string to prevent logging to file. Default: `""`
 
-10. **`@fzf-links-hide-bottom-bar`**: Hide the bottom bar with the instructions (`on` or `off`). Default: `off`.
+11. **`@fzf-links-hide-bottom-bar`**: Hide the bottom bar with the instructions (`on` or `off`). Default: `off`.
 
-11. **Path expansion in option values**: tmux expands environment variables (e.g., `$HOME`, `$XDG_CONFIG_HOME`) when loading `tmux.conf`, so you can use them freely in any path-based option. The plugin additionally expands a leading `~/` for the options it processes. Both forms are therefore equivalent:
+12. **Path expansion in option values**: tmux expands environment variables (e.g., `$HOME`, `$XDG_CONFIG_HOME`) when loading `tmux.conf`, so you can use them freely in any path-based option. The plugin additionally expands a leading `~/` for the options it processes. Both forms are therefore equivalent:
     ```tmux
     set-option -g @fzf-links-log-filename "$HOME/.cache/tmux-fzf-links/fzf-links.log"
     set-option -g @fzf-links-log-filename "~/.cache/tmux-fzf-links/fzf-links.log"
