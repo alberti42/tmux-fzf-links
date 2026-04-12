@@ -10,22 +10,10 @@ import re
 import subprocess
 import sys
 import unicodedata
-from typing import Generator, Match
-
-from tmux_fzf_links.fzf_handler import FzfReturnType, run_fzf
-from tmux_fzf_links.logging import set_up_logger
+from typing import cast
 
 from .colors import colors
 from .configs import configs
-
-if sys.version_info >= (3, 12):  # For Python 3.12 and newer
-    from typing import override
-elif sys.version_info < (3, 12):  # For Python 3.8 and older
-    # Fallback for Python < 3.12
-    def override(method):
-        return method
-
-
 from .default_schemes import default_schemes
 from .errors_types import (
     CommandFailed,
@@ -42,6 +30,8 @@ from .errors_types import (
     NoSuitableAppFound,
     PatternNotMatching,
 )
+from .fzf_handler import FzfReturnType, run_fzf
+from .logging import set_up_logger
 from .opener import (
     OpenerType,
     PostHandledMatch,
@@ -66,19 +56,23 @@ def load_user_module(file_path: str) -> tuple[list[SchemeEntry], list[str]]:
             spec.loader.exec_module(user_module)
 
             # Retrieve the user_schemes attribute
-            user_schemes = getattr(user_module, "user_schemes", None)
+            user_schemes = cast(
+                list[SchemeEntry] | None, getattr(user_module, "user_schemes", None)
+            )
 
             # Retrieve the rm_default_schemes attribute
-            rm_default_schemes = getattr(user_module, "rm_default_schemes", None)
+            rm_default_schemes = cast(
+                list[str] | None, getattr(user_module, "rm_default_schemes", None)
+            )
 
-            if user_schemes is None or not isinstance(user_schemes, list):
+            if user_schemes is None or not isinstance(user_schemes, list):  # pyright: ignore[reportUnnecessaryIsInstance]
                 raise TypeError(
                     f"'user_schemes' must be a list, got {type(user_schemes)}"
                 )
 
             if rm_default_schemes is None:
                 rm_default_schemes = []
-            if not isinstance(rm_default_schemes, list):
+            if not isinstance(rm_default_schemes, list):  # pyright: ignore[reportUnnecessaryIsInstance]
                 raise TypeError(
                     f"'rm_default_schemes' must be a list, got {type(rm_default_schemes)}"
                 )
@@ -171,7 +165,7 @@ def run(
         window_height = int(pane_size_list[0])
         window_width = int(pane_size_list[1])
         pane_height = int(pane_size_list[2])
-        pane_width = int(pane_size_list[3])
+        # pane_width = int(pane_size_list[3])
 
         scroll_position: int
         if pane_size_list[4]:
@@ -260,7 +254,7 @@ def run(
     # We use the unique set as an expedient to sort over
     # pre_handled_text while keeping the original text
     seen: set[str] = set()
-    items: list[tuple[PreHandledMatch, str, int, Match[str]]] = []
+    items: list[tuple[PreHandledMatch, str, int, re.Match[str]]] = []
 
     # Process each scheme
     for scheme in schemes:
@@ -426,6 +420,10 @@ def run(
                             f"warning: cannot open selected choice with system's default opener: {selected_match.group(0)}"
                         )
                         continue
+                case _:
+                    # "OPEN" requires no special handling here; it proceeds directly to open_link below
+                    # "COPY_TO_CLIPBOARD" is handled earlier via continue
+                    pass
 
             try:
                 open_link(
