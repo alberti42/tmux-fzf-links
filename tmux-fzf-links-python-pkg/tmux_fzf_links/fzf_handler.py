@@ -39,8 +39,10 @@ def extract_option(cmd_user_args: list[str], option: str) -> str | None:
         option_arg = cmd_user_args[option_index + 1]
 
         # Remove `option` and its argument
-        cmd_user_args.pop(option_index)  # Remove `option`
-        cmd_user_args.pop(option_index)  # Remove the argument (shifts due to first pop)
+        _ = cmd_user_args.pop(option_index)  # Remove `option`
+        _ = cmd_user_args.pop(
+            option_index
+        )  # Remove the argument (shifts due to first pop)
 
         return option_arg
     else:
@@ -175,14 +177,14 @@ def run_fzf(
 
     if not configs.hide_bottom_bar:
         if sys.platform == "darwin":
-            meta_key = "⌥"  # option key
+            # meta_key = "⌥"  # option key
             explorer = "Finder"
         elif sys.platform == "win32":
-            meta_key = "alt"  # symbol: ⎇
+            # meta_key = "alt"  # symbol: ⎇
             explorer = "system's file manager"
         else:
             # historically the alt key was called meta in unix/linux systems
-            meta_key = "meta"  # symbol: ◆
+            # meta_key = "meta"  # symbol: ◆
             explorer = "explorer"
 
         fzf_args.extend(
@@ -232,7 +234,7 @@ def run_fzf(
                 stderr = stderr_file.read().strip()
 
             # Wait for the tmux popup to complete
-            tmux_process.wait()
+            _ = tmux_process.wait()
 
             # Handle errors or user cancellation
             if tmux_process.returncode == 0:
