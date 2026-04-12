@@ -4,15 +4,18 @@
 #   Author: (c) 2024 Andrea Alberti
 # ===============================================================================
 
+from __future__ import annotations
+
 import logging
 import os
 import subprocess
+from typing import ClassVar
 
 
 class ConfigurationManager:
     """Parse the configurations and assert their validity"""
 
-    _instance = None
+    _instance: ClassVar[ConfigurationManager | None] = None
     _initialized: bool = False
 
     def __new__(cls):

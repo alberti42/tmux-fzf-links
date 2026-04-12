@@ -4,8 +4,11 @@
 #   Author: (c) 2024 Andrea Alberti
 # ===============================================================================
 
+from __future__ import annotations
+
 import os
 from pathlib import Path
+from typing import ClassVar
 
 from .errors_types import LsColorsNotConfigured
 
@@ -15,7 +18,7 @@ DEFAULT_DASH_COLOR = [160, 160, 160]
 
 
 class ColorsSingletonCls:
-    _instance = None
+    _instance: ClassVar[ColorsSingletonCls | None] = None
 
     _color_mapping: dict[str, str] = {}  # dictionary storing LS_COLORS
     enabled: bool = False  # whether to use colors
