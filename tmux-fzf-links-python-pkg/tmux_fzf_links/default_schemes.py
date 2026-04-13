@@ -101,6 +101,20 @@ code_error_scheme: SchemeEntry = {
 
 # <<< CODE ERROR SCHEME <<<
 
+# >>> OXLINT ERROR SCHEME >>>
+
+oxlint_scheme: SchemeEntry = {
+    "tags": ("code err.", "Python"),
+    "opener": OpenerType.EDITOR,
+    "post_handler": code_error_post_handler,
+    "pre_handler": code_error_pre_handler,
+    # Matches linter output like: [src/foo.ts:6:44]
+    # The column number (e.g. 44) is captured but ignored when opening the file.
+    "regex": [re.compile(r"\[(?P<file>[^\]\s:][^\]\s]*):(?P<line>\d+):\d+\]")],
+}
+
+# <<< OXLINT ERROR SCHEME <<<
+
 # >>> URL SCHEME >>>
 
 url_scheme: SchemeEntry = {
@@ -231,6 +245,7 @@ default_schemes: list[SchemeEntry] = [
     file_scheme,
     git_scheme,
     code_error_scheme,
+    oxlint_scheme,
 ]
 
 __all__ = ["default_schemes"]
