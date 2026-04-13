@@ -1,4 +1,7 @@
 {
+  "include": [
+    "tmux-fzf-links-python-pkg"
+  ],
   "reportUnreachable": "none",
   "reportOptionalSubscript": "error"
 }
