@@ -104,13 +104,15 @@ code_error_scheme: SchemeEntry = {
 # >>> OXLINT ERROR SCHEME >>>
 
 oxlint_scheme: SchemeEntry = {
-    "tags": ("code err.", "Python"),
+    "tags": ("code err.", "JS/TS"),
     "opener": OpenerType.EDITOR,
     "post_handler": code_error_post_handler,
     "pre_handler": code_error_pre_handler,
-    # Matches linter output like: [src/foo.ts:6:44]
+    # Matches linter output like: [src/foo.ts:6:44] or [src/foo bar.d.ts:6:44]
+    # File paths may contain spaces; [^\]]+ allows any char except the closing bracket.
+    # The regex engine backtracks to split on :line:col at the end.
     # The column number (e.g. 44) is captured but ignored when opening the file.
-    "regex": [re.compile(r"\[(?P<file>[^\]\s:][^\]\s]*):(?P<line>\d+):\d+\]")],
+    "regex": [re.compile(r"\[(?P<file>[^\]]+):(?P<line>\d+):\d+\]")],
 }
 
 # <<< OXLINT ERROR SCHEME <<<
