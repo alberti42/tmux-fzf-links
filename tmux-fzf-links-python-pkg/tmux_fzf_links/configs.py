@@ -134,6 +134,17 @@ class ConfigurationManager:
                 text=True,
                 shell=False,
             )
+            # On some tmux releases (notably 3.4 as shipped by Ubuntu 24.04 in
+            # `tmux 3.4-1ubuntu0.1`) the unit-separator byte we use as the
+            # field delimiter is escaped to the literal 4-character string
+            # `\037` before it reaches stdout. Normalize that back to the
+            # actual byte so the split below still works. On tmux versions
+            # that pass the byte through unchanged this is a no-op.
+            #
+            # Reproducer (no plugin involved):
+            #   $ tmux display-message -p $'A\x1fB' | xxd
+            #   00000000: 415c 3033 3742 0a   # "A\037B\n"
+            result = result.replace("\\037", "\x1f")
             lines = result.split("\x1f")
             fzf_display_options = lines[0] if len(lines) > 0 else ""
             other_colors = lines[1] if len(lines) > 1 else ""
