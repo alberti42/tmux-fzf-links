@@ -98,6 +98,16 @@ if python_resolved=$(command -v -- "$python" 2>/dev/null); then
   python="$python_resolved"
 fi
 
+# Guard against pre-3.10 interpreters with a clear diagnostic.
+# A bare command-name that did not resolve stays non-executable here and is
+# handled by the run-time -x check on the bound key instead.
+if [ -x "$python" ]; then
+  ver=$("$python" -c 'import sys; print(".".join(map(str, sys.version_info[:3]))); sys.exit(0 if sys.version_info >= (3, 10) else 1)' 2>/dev/null) || {
+    tmux display-message -d 0 "fzf-links: requires python >= 3.10, found ${ver:-unknown} at $python (set @fzf-links-python)"
+    exit 0
+  }
+fi
+
 # Prebuild a fully quoted command line (safe for /bin/sh in run-shell)
 python_q=$(printf "%q" "$python")
 PYENV="PYTHONPATH=$SCRIPT_DIR/tmux-fzf-links-python-pkg:$python_path"
