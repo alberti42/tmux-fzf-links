@@ -107,12 +107,15 @@ _URL_TRAILING_PUNCTUATION = ".,;:!?'\""
 
 
 def trim_url(url: str) -> str:
+    opens = url.count("(")
+    closes = url.count(")")
     while url:
         last = url[-1]
         if last in _URL_TRAILING_PUNCTUATION:
             url = url[:-1]
-        elif last == ")" and url.count("(") < url.count(")"):
+        elif last == ")" and opens < closes:
             url = url[:-1]
+            closes -= 1
         else:
             break
     return url
