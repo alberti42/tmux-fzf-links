@@ -23,6 +23,7 @@ The plugin was originally inspired by [tmux-fzf-url](https://github.com/wfxr/tmu
 - **Integration with tmux Popup Windows**: Provides a seamless user experience within tmux sessions.
 - **Flexible Open Commands**: Configure your favorite editor, browser, or custom command to open links.
 - **Dynamic Logging**: Output logs to tmux messages and/or a file, with adjustable verbosity.
+- **OSC 8 hyperlinks**: Resolve [OSC 8 hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda) emitted by tools like `gh`, `delta`, and CI output. A token such as `#497` opens the exact URL it was linked to, labeled `PR`, `issue`, or `commit`, with no guessing.
 - **Colorized Links**: Enhance readability with colorized links, using `$LS_COLORS` for files and directories.
 - **Clipboard support**: By pressing `ctrl`-`c`, the selected items are copied to the tmux buffer and your system's clipboard, instead of executing the configured actions.
 - **Default file association support**: By pressing `ctrl`-`d`, the selected items are opened based on the system's default file association (i.e., using `open` in macOS and `xdg-open` in Linux).
@@ -394,6 +395,43 @@ default_schemes = [
     },
 ]
 ```
+
+### Resolving OSC 8 Hyperlinks
+
+Many tools wrap on-screen text in an [OSC 8 hyperlink](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda) whose payload is the canonical target URL:
+
+```
+ESC ] 8 ; id=7jn05 ; https://github.com/owner/repo/pull/497 ST  #497  ESC ] 8 ; ; ST
+```
+
+The plugin captures the pane with `tmux capture-pane -e`, which preserves these sequences. A built-in scheme then surfaces each hyperlink as its own entry, classified as `PR`, `issue`, `commit`, or `link` from the target URL. Selecting `#497` opens `…/pull/497` directly, so an ambiguous token never has to be guessed. This needs a `tmux` that records OSC 8 hyperlinks (3.4 and later). On older versions the scheme finds nothing, and the rest of the plugin is unaffected.
+
+The remaining schemes keep matching the plain text, which the plugin reconstructs from the same capture.
+
+#### Reading the Hyperlink Map in a Handler
+
+User schemes can resolve their own matches against the captured hyperlinks. Import `target_for`, which maps a visible token to the URL it was linked to, or returns `None` when the token was not a hyperlink:
+
+```python
+from tmux_fzf_links.export import target_for
+
+def issue_post_handler(match: re.Match[str]) -> PostHandledMatch:
+    token = match.group(0)
+    return {"url": target_for(token) or f"https://github.com/owner/repo/issues/{match.group('num')}"}
+```
+
+A token that appears with two different targets in one capture is dropped from the map, so a lookup never resolves to the wrong URL.
+
+#### Matching Escaped Content
+
+A scheme can opt into matching the escaped capture instead of the plain text by setting `"escaped": True`. Its regex then sees OSC 8 sequences and SGR codes. This is how the built-in hyperlink scheme works. Most schemes leave it unset and match clean text.
+
+#### References
+
+- [Hyperlinks in terminal emulators](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda), the de-facto specification by the VTE maintainer.
+- [iTerm2 escape codes](https://iterm2.com/documentation-escape-codes.html), under the *Anchor (OSC 8)* heading.
+- [WezTerm hyperlinks recipe](https://wezterm.org/recipes/hyperlinks.html), a practical guide to producing and clicking them.
+- [OSC 8 adoption tracker](https://github.com/Alhadis/OSC8-Adoption), terminal-by-terminal support.
 
 ### Adding User-Defined Schemes
 

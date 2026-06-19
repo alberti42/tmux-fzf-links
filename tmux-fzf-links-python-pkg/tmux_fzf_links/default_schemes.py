@@ -17,6 +17,50 @@ from .export import (
     configs,
     heuristic_find_file,
 )
+from .hyperlinks import clean_text, hyperlink_regex, url_kind
+
+# >>> OSC 8 HYPERLINK SCHEME >>>
+
+# Maps a forge URL kind to the tag shown in the picker. The scheme's tags are
+# derived from this map plus the fallback, so they can never drift out of sync.
+# The tags are owned solely by this scheme, so the post-handler dispatch (which
+# routes by tag) never collides with another.
+_OSC8_TAGS: dict[str, str] = {"pr": "PR", "issue": "issue", "commit": "commit"}
+_OSC8_FALLBACK_TAG = "link"
+
+
+def osc8_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
+    text = clean_text(match.group("text"))
+    uri = match.group("uri").strip()
+
+    # Drop empty hyperlinks (e.g. a link wrapping only whitespace).
+    if not text or not uri:
+        return None
+
+    tag = _OSC8_TAGS.get(url_kind(uri), _OSC8_FALLBACK_TAG)
+
+    display_text = (
+        f"{colors.rgb_color(80, 200, 255)}{text}{colors.reset_color} "
+        f"{colors.dim_color}→ {uri}{colors.reset_color}"
+    )
+
+    return {"display_text": display_text, "tag": tag}
+
+
+def osc8_post_handler(match: re.Match[str]) -> PostHandledMatch:
+    return {"url": match.group("uri").strip()}
+
+
+osc8_scheme: SchemeEntry = {
+    "tags": (_OSC8_FALLBACK_TAG, *_OSC8_TAGS.values()),
+    "opener": OpenerType.BROWSER,
+    "escaped": True,
+    "post_handler": osc8_post_handler,
+    "pre_handler": osc8_pre_handler,
+    "regex": [hyperlink_regex()],
+}
+
+# <<< OSC 8 HYPERLINK SCHEME <<<
 
 # >>> GIT SCHEME >>>
 
@@ -251,6 +295,7 @@ file_scheme: SchemeEntry = {
 
 # Define schemes
 default_schemes: list[SchemeEntry] = [
+    osc8_scheme,
     url_scheme,
     file_scheme,
     git_scheme,
