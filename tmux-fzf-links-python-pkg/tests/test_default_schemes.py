@@ -17,8 +17,12 @@ from tmux_fzf_links.default_schemes import trim_url, url_scheme
         ("https://x.dev/a/b'", "https://x.dev/a/b"),
         ('https://x.dev/a/b"', "https://x.dev/a/b"),
         ("https://x.dev/a#readme)", "https://x.dev/a#readme"),
+        ("https://x.dev/a/b))", "https://x.dev/a/b"),
+        ("https://x.dev/a/b?!)", "https://x.dev/a/b"),
+        ("https://x.dev/a/b).,", "https://x.dev/a/b"),
         ("https://en.wikipedia.org/wiki/Foo_(bar)", "https://en.wikipedia.org/wiki/Foo_(bar)"),
         ("https://en.wikipedia.org/wiki/Foo_(bar).", "https://en.wikipedia.org/wiki/Foo_(bar)"),
+        ("https://en.wikipedia.org/wiki/Foo_(bar)))", "https://en.wikipedia.org/wiki/Foo_(bar)"),
     ],
 )
 def test_trim_url(raw: str, trimmed: str) -> None:
