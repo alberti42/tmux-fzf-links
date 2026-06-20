@@ -103,14 +103,40 @@ code_error_scheme: SchemeEntry = {
 
 # >>> URL SCHEME >>>
 
+_URL_TRAILING_PUNCTUATION = ".,;:!?'\""
+
+
+def trim_url(url: str) -> str:
+    opens = url.count("(")
+    closes = url.count(")")
+    while url:
+        last = url[-1]
+        if last in _URL_TRAILING_PUNCTUATION:
+            url = url[:-1]
+        elif last == ")" and opens < closes:
+            url = url[:-1]
+            closes -= 1
+        else:
+            break
+    return url
+
+
+def url_pre_handler(match: re.Match[str]) -> PreHandledMatch:
+    return {
+        "display_text": f"{colors.rgb_color(200, 0, 255)}{trim_url(match.group(0))}{colors.reset_color}",
+        "tag": "url",
+    }
+
+
+def url_post_handler(match: re.Match[str]) -> PostHandledMatch:
+    return {"url": trim_url(match.group(0))}
+
+
 url_scheme: SchemeEntry = {
     "tags": ("url",),
     "opener": OpenerType.BROWSER,
-    "post_handler": None,
-    "pre_handler": lambda m: {
-        "display_text": f"{colors.rgb_color(200, 0, 255)}{m.group(0)}{colors.reset_color}",
-        "tag": "url",
-    },
+    "post_handler": url_post_handler,
+    "pre_handler": url_pre_handler,
     "regex": [
         re.compile(
             r"https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*"
