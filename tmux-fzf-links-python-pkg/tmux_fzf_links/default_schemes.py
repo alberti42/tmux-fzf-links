@@ -33,7 +33,7 @@ git_scheme: SchemeEntry = {
     "opener": OpenerType.BROWSER,
     "post_handler": git_post_handler,
     "pre_handler": lambda m: {
-        "display_text": f"{colors.rgb_color(0, 255, 115)}{m.group(0)}{colors.reset_color}",
+        "display_text": f"{colors.ansi_color(94)}{m.group(0)}{colors.reset_color}",
         "tag": "git",
     },
     "regex": [
@@ -59,9 +59,7 @@ def code_error_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
         # drop the match if it cannot resolve the path
         return None
 
-    display_text = (
-        f"{colors.rgb_color(255, 0, 0)}{file}, line {line}{colors.reset_color}"
-    )
+    display_text = f"{colors.ansi_color(91)}{file}, line {line}{colors.reset_color}"
 
     suffix = resolved_path.suffix
 
@@ -123,7 +121,7 @@ def trim_url(url: str) -> str:
 
 def url_pre_handler(match: re.Match[str]) -> PreHandledMatch:
     return {
-        "display_text": f"{colors.rgb_color(200, 0, 255)}{trim_url(match.group(0))}{colors.reset_color}",
+        "display_text": f"{colors.ansi_color(95)}{trim_url(match.group(0))}{colors.reset_color}",
         "tag": "url",
     }
 

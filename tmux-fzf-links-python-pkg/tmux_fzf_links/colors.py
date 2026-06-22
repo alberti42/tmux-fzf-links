@@ -12,9 +12,15 @@ from typing import ClassVar
 
 from .errors_types import LsColorsNotConfigured
 
-DEFAULT_TAG_COLOR = [130, 130, 130]
-DEFAULT_INDEX_COLOR = [0, 255, 0]
-DEFAULT_DASH_COLOR = [160, 160, 160]
+# Index / tag / dash colors, given as ANSI palette codes (not absolute RGB) so
+# the terminal's active theme picks the actual shade and they stay legible when
+# switching between light and dark backgrounds. The dash rides the default
+# foreground (dim); the index and tag use hues that read on both Latte and
+# Frappe. Tags share one uniform color so they read as a calm label column,
+# distinct from the per-scheme match hues; the match text carries the type hue.
+DEFAULT_TAG_COLOR = 96  # cyan — uniform label color for every tag
+DEFAULT_INDEX_COLOR = 94  # bright blue, rendered bold
+DEFAULT_DASH_COLOR = 2  # dim default fg
 
 
 class ColorsSingletonCls:
@@ -39,9 +45,10 @@ class ColorsSingletonCls:
         if state:
             self.enabled = True
             self.reset_color = "\033[0m"
-            self.tag_color = self.rgb_color(*DEFAULT_TAG_COLOR)
-            self.index_color = self.rgb_color(*DEFAULT_INDEX_COLOR)
-            self.dash_color = self.rgb_color(*DEFAULT_DASH_COLOR)
+            self.tag_color = self.ansi_color(DEFAULT_TAG_COLOR)
+            # bold + hue: blue keeps contrast on light (Latte) and pops on dark (Frappe)
+            self.index_color = self.ansi_color(1) + self.ansi_color(DEFAULT_INDEX_COLOR)
+            self.dash_color = self.ansi_color(DEFAULT_DASH_COLOR)
         else:
             self.enabled = False
             self.reset_color = ""
@@ -61,6 +68,18 @@ class ColorsSingletonCls:
     def rgb_color(self, R: int, G: int, B: int):
         if self.enabled:
             return f"\033[38;2;{R:d};{G:d};{B:d}m"
+        else:
+            return ""
+
+    def ansi_color(self, code: int) -> str:
+        """Return an ANSI SGR escape for a color index or attribute.
+
+        Examples: 1 = bold, 2 = dim, 32 = green, 92 = bright green. Bold/dim ride
+        the terminal's default foreground (legible on any background); the 30-37 /
+        90-97 hues are palette-relative, so the terminal theme picks the shade.
+        """
+        if self.enabled:
+            return f"\033[{code:d}m"
         else:
             return ""
 

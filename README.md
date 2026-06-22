@@ -238,7 +238,7 @@ Comment out the options you find useful and replace the placeholders with approp
 
 	Default setting: `0`
 
-6. **`@fzf-links-use-colors`**: Enable or disable ANSI color highlighting in the fzf picker (`on` or `off`). When enabled, file paths in the list are colorized using `$LS_COLORS` and fzf is invoked with `--ansi` to render the colors. Disable this if your terminal does not support ANSI colors or if you prefer a plain listing.
+6. **`@fzf-links-use-colors`**: Enable or disable ANSI color highlighting in the fzf popup (`on` or `off`). When enabled, file paths in the list are colorized using `$LS_COLORS` and fzf is invoked with `--ansi` to render the colors. Disable this if your terminal does not support ANSI colors or if you prefer a plain listing.
 
    Default setting: `on`
 
@@ -272,6 +272,33 @@ Comment out the options you find useful and replace the placeholders with approp
     set-option -g @fzf-links-log-filename "$HOME/.cache/tmux-fzf-links/fzf-links.log"
     set-option -g @fzf-links-log-filename "~/.cache/tmux-fzf-links/fzf-links.log"
     ```
+
+### Color scheme
+
+The fzf popup is colored to stay legible under **both light and dark terminal themes** without any per-theme configuration. The trick is that the plugin emits **ANSI palette codes** (e.g. "blue", "red", "cyan") rather than absolute RGB values. Your terminal remaps those 16 palette slots whenever it switches theme — so the same code resolves to a shade chosen for the currently active background. Modern terminals and themes do this automatically by swapping the palette on OS appearance changes, and the colors follow along.
+
+What follows is a description of the design criteria for the coloring scheme adopted.
+
+Each row is laid out as `index - [tag] - match`, colored as follows:
+
+| Element | Color | Rationale |
+|---------|-------|-----------|
+| Entry index | **bold**, default foreground | Rides the theme's own text color, so it always has full contrast on any background. |
+| `[tag]` column | a single uniform color (cyan) | A consistent label that does not compete with the match text. |
+| Separators (`-`) | dim, default foreground | De-emphasized but still legible. |
+| Match text | colored by link type | The only place hue varies, so color signals *what kind of link it is* (see below). |
+
+Match text follows a small, deliberately limited convention so that color carries meaning and the number of distinct hues stays low as more schemes are added:
+
+| Link type | Color |
+|-----------|-------|
+| URLs | magenta |
+| git remotes | blue |
+| Code errors / source locations (`file:line`) | red |
+| Files and directories | taken from `$LS_COLORS` (filesystem-aware, and swaps with your light/dark `$LS_COLORS`) |
+| Plain tokens you only copy (e.g. IP addresses) | uncolored (default foreground) |
+
+> **Note on contrast.** A few palette hues — notably green and yellow — are low-contrast on light themes such as Catppuccin Latte, so the defaults avoid them for anything that must stay readable. If a color does not work well for you, please [open an issue](https://github.com/alberti42/tmux-fzf-links/issues): the defaults are chosen to please most users on both light and dark backgrounds, and we are happy to refine them. Should there be enough demand for fine-grained control, we will add support for an optional configuration file in which each color can be specified explicitly.
 
 ### Tmux popup borders
 
@@ -311,7 +338,7 @@ Make it executable (`chmod +x ~/.config/zac/io-cmd`) and point `ZAC_IO_CMD` to i
 export ZAC_IO_CMD=~/.config/zac/io-cmd
 ```
 
-With this setup, every time your OS (macOS or Linux) switches between dark and light mode, `zsh-appearance-control` runs the script once, the tmux option is updated, and the next time you open the fzf picker it will use the correct color scheme — with no manual intervention needed.
+With this setup, every time your OS (macOS or Linux) switches between dark and light mode, `zsh-appearance-control` runs the script once, the tmux option is updated, and the next time you open the fzf popup it will use the correct color scheme — with no manual intervention needed.
 
 ---
 

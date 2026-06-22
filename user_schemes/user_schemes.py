@@ -1,10 +1,6 @@
 from tmux_fzf_links.export import OpenerType, SchemeEntry, PreHandledMatch, PostHandledMatch, configs, colors
 import re
 
-## Configure the color of indexes and tags
-colors.set_index_color(0,255,0)
-colors.set_tag_color(255,255,0)
-
 # >>> IP SCHEME >>>
 
 def ip_pre_handler(match:re.Match[str]) -> PreHandledMatch | None:
