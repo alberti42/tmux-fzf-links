@@ -31,6 +31,13 @@ from .errors_types import (
     PatternNotMatching,
 )
 from .fzf_handler import FzfReturnType, run_fzf
+from .hyperlinks import (
+    hyperlink_regex,
+    offset_translator,
+    parse_links,
+    set_links,
+    strip_escapes,
+)
 from .logging import set_up_logger
 from .opener import (
     OpenerType,
@@ -90,6 +97,30 @@ def load_user_module(file_path: str) -> tuple[list[SchemeEntry], list[str]]:
 def trim_str(s: str) -> str:
     """Trim leading and trailing spaces from a string."""
     return s.strip()
+
+
+def drop_hyperlinked_duplicates(
+    items: list[tuple[PreHandledMatch, str, int, re.Match[str]]],
+) -> list[tuple[PreHandledMatch, str, int, re.Match[str]]]:
+    """Remove plain-text matches that resolve to the same target as an OSC 8
+    hyperlink already present (e.g. a bare URL that was also hyperlinked to
+    itself). The hyperlink row carries the canonical target, so it wins. Keying
+    on the target rather than the visible text avoids dropping an unrelated
+    match (such as a filename) that merely shares a hyperlink's label.
+    """
+    hyperlink_re = hyperlink_regex()
+    osc8_targets = {
+        item[3].group("uri").strip()
+        for item in items
+        if item[3].re is hyperlink_re
+    }
+    if not osc8_targets:
+        return items
+    return [
+        item
+        for item in items
+        if item[3].re is hyperlink_re or item[1].strip() not in osc8_targets
+    ]
 
 
 def run(
@@ -176,26 +207,38 @@ def run(
     except Exception as e:
         raise FailedTmuxPaneSize(f"tmux pane size could not be determined: {e}")
 
-    # Capture tmux content
-    capture_str: list[str] = [
+    # Capture tmux content. The `-e` flag keeps escape sequences, so OSC 8
+    # hyperlinks and SGR codes survive. The plain text the other schemes expect
+    # is reconstructed from it below.
+    capture_args: list[str] = [
         "tmux",
         "capture-pane",
         "-J",
         "-p",
+        "-e",
         "-S",
         f"{-scroll_position - configs.history_lines}",
         "-E",
         f"{pane_height - scroll_position - 1}",
     ]
 
-    content = subprocess.check_output(
-        capture_str,
+    content_escaped = subprocess.check_output(
+        capture_args,
         shell=False,
         text=True,
     )
 
     # To deal with two different forms of handling diactrics, we normalize the string
-    content = unicodedata.normalize("NFC", content)
+    content_escaped = unicodedata.normalize("NFC", content_escaped)
+
+    # Reconstruct the plain capture for schemes that match unescaped text, and
+    # expose the hyperlink map so user-scheme handlers can resolve a matched
+    # token to the URL it was hyperlinked to (see hyperlinks.target_for).
+    content = strip_escapes(content_escaped)
+    set_links(parse_links(content_escaped))
+    # Maps escaped-capture offsets to their plain-text positions, so escaped
+    # schemes sort by on-screen position alongside the plain-text schemes.
+    escaped_to_plain = offset_translator(content_escaped)
 
     # Load user schemes
     user_schemes: list[SchemeEntry]
@@ -258,11 +301,20 @@ def run(
 
     # Process each scheme
     for scheme in schemes:
+        # Escaped schemes (e.g. the OSC 8 hyperlink scheme) match the raw
+        # capture. Everything else matches the reconstructed plain text.
+        source = content_escaped if scheme.get("escaped") else content
         # Use regex.finditer to iterate over all matches
         for regex in scheme["regex"]:
-            for match in regex.finditer(content):
+            for match in regex.finditer(source):
                 entire_match: str = match.group(0)
                 match_start: int = match.start()
+                if scheme.get("escaped"):
+                    # Offsets into the escaped capture are inflated by the escape
+                    # bytes. Translate to the plain-text coordinate space so the
+                    # match sorts by its on-screen position alongside the other
+                    # schemes.
+                    match_start = escaped_to_plain(match_start)
 
                 # Extract and process the matching string
                 pre_handled_match: PreHandledMatch | None
@@ -298,6 +350,9 @@ def run(
                         )
     # Clean up no longer needed variables
     del seen
+
+    # Drop plain-text matches that an OSC 8 hyperlink already covers.
+    items = drop_hyperlinked_duplicates(items)
 
     if items == []:
         logger.info("no link found")

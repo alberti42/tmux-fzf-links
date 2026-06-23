@@ -32,6 +32,7 @@ class ColorsSingletonCls:
     index_color: str = ""  # fallback case
     reset_color: str = ""  # fallback case
     dash_color: str = ""  # fallback case
+    dim_color: str = ""  # fallback case
 
     def __new__(cls):
         if cls._instance is None:
@@ -49,12 +50,14 @@ class ColorsSingletonCls:
             # bold + hue: blue keeps contrast on light (Latte) and pops on dark (Frappe)
             self.index_color = self.ansi_color(1) + self.ansi_color(DEFAULT_INDEX_COLOR)
             self.dash_color = self.ansi_color(DEFAULT_DASH_COLOR)
+            self.dim_color = "\033[2m"
         else:
             self.enabled = False
             self.reset_color = ""
             self.tag_color = ""
             self.index_color = ""
             self.dash_color = ""
+            self.dim_color = ""
 
     def set_tag_color(self, R: int, G: int, B: int) -> None:
         self.tag_color = self.rgb_color(R, G, B)

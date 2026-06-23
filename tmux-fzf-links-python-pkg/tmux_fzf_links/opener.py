@@ -124,12 +124,19 @@ PostHandler = Callable[[re.Match[str]], PostHandledMatch] | None
 
 
 # Define the structure of each scheme entry
-class SchemeEntry(TypedDict):
+class SchemeEntryRequired(TypedDict):
     tags: tuple[str, ...]
     opener: OpenerType
     pre_handler: PreHandler  # A function that takes a string and returns a string
     post_handler: PostHandler  # A function that takes a string and returns a string
     regex: list[re.Pattern[str]]  # A compiled regex pattern
+
+
+class SchemeEntry(SchemeEntryRequired, total=False):
+    # When true, the scheme matches against the escaped capture
+    # (`capture-pane -e`) rather than the plain text, so it can see OSC 8
+    # hyperlinks and SGR codes. Optional. Defaults to false.
+    escaped: bool
 
 
 xdg_open_util: str | None = None
