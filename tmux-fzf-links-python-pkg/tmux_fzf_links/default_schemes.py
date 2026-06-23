@@ -40,7 +40,7 @@ def osc8_pre_handler(match: re.Match[str]) -> PreHandledMatch | None:
     tag = _OSC8_TAGS.get(url_kind(uri), _OSC8_FALLBACK_TAG)
 
     display_text = (
-        f"{colors.rgb_color(80, 200, 255)}{text}{colors.reset_color} "
+        f"{colors.rgb_color(41, 121, 255)}{text}{colors.reset_color} "
         f"{colors.dim_color}→ {uri}{colors.reset_color}"
     )
 
