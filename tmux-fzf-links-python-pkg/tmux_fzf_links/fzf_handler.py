@@ -194,8 +194,23 @@ def run_fzf(
             ]
         )
 
-    # Combine fzf arguments, giving user options higher priority
-    cmd_args = fzf_args + cmd_user_args
+    # Combine fzf arguments, giving user options higher priority.
+    #
+    # `--no-tmux` is the one exception and is appended last, where it cannot be
+    # overridden: fzf is already running inside the tmux popup created above,
+    # and tmux silently ignores a popup requested from within a popup (it
+    # returns success without running anything). fzf would then exit with
+    # status 0 and print nothing at all, leaving us with no selection and no
+    # error to report. Since fzf output is captured through the named pipes
+    # below, letting fzf display itself on its own is never a viable choice
+    # here, whether it is asked for in FZF_DEFAULT_OPTS, in the file pointed to
+    # by FZF_DEFAULT_OPTS_FILE, or in `@fzf-links-fzf-display-options`.
+    #
+    # This also covers `--popup`, the name that fzf 0.71 introduced for the
+    # same feature (`--tmux` became its alias): fzf parses `--no-tmux` and
+    # `--no-popup` identically. The flag requires fzf >= 0.53, a milder
+    # requirement than the `print(...)` action used above (fzf >= 0.45).
+    cmd_args = fzf_args + cmd_user_args + ["--no-tmux"]
 
     # Create a temporary directory for the named pipes
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -241,11 +256,25 @@ def run_fzf(
                 # Split the lines from fzf
                 results = stdout.splitlines()
 
+                if not results:
+                    # fzf exited successfully without printing anything, not
+                    # even the action bound to the key that was pressed. This
+                    # is not a cancelled selection: cancelling exits with 130.
+                    # It means fzf never really ran, the usual reason being
+                    # that it was asked to open a tmux popup of its own (see
+                    # `--no-tmux` above).
+                    raise FzfError(
+                        "fzf exited without providing any selection. Check that "
+                        + "FZF_DEFAULT_OPTS (or the file set in FZF_DEFAULT_OPTS_FILE) "
+                        + "does not ask fzf to display itself on its own with '--tmux' "
+                        + f"or '--popup'. fzf reported: {stderr}"
+                    )
+
                 # The first line is special and tells us what key was pressed / action was chosen by the user
                 selected_action = results[0]
                 if not is_valid_action_type(selected_action):
                     raise FzfWrongAction(
-                        f"Action selected with fzf is not supported: {selected_action}"
+                        f"action selected with fzf is not supported: {selected_action}"
                     )
 
                 return {"action": selected_action, "selection": results[1:]}

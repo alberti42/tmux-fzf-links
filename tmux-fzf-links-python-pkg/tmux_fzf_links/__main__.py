@@ -110,9 +110,7 @@ def drop_hyperlinked_duplicates(
     """
     hyperlink_re = hyperlink_regex()
     osc8_targets = {
-        item[3].group("uri").strip()
-        for item in items
-        if item[3].re is hyperlink_re
+        item[3].group("uri").strip() for item in items if item[3].re is hyperlink_re
     }
     if not osc8_targets:
         return items
@@ -385,6 +383,7 @@ def run(
             window_width,
         )
     except FzfUserInterrupt as e:
+        logger.debug(f"{e}; exiting quietly")
         sys.exit(0)
 
     # Disable colors; this is relevant when producing the pre_handled_match
@@ -546,6 +545,6 @@ if __name__ == "__main__":
     ) as e:
         logging.error(f"{e}")
     except Exception as e:
-        logging.error(f"unexpected runtime error: {e}")
+        logging.error(f"unexpected runtime error: {e}", exc_info=True)
 
 __all__ = []

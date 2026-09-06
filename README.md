@@ -41,10 +41,21 @@ The plugin's Python-based architecture enables advanced users to:
 
 ### 🛠️ Requirements
 
-This plugin is designed to have minimum requirements: only `tmux` and `python3`. It does not require special Python modules to work. It has been successfully tested with:
+This plugin is designed to have minimum requirements: only `tmux`, `python3` and `fzf`. It does not require special Python modules to work. It has been successfully tested with:
 
 - tmux from 3.4
 - python from 3.10
+- fzf from 0.53
+
+`fzf` 0.53 is required because the plugin runs `fzf` with `--no-tmux`, which
+prevents `fzf` from displaying itself on its own; the plugin already shows `fzf`
+inside a popup that it manages itself. Without it, a `--tmux` entry in your
+`FZF_DEFAULT_OPTS` (or in the file pointed to by `FZF_DEFAULT_OPTS_FILE`) would
+make `fzf` request a second, nested popup, which tmux silently refuses, leaving
+the plugin with no selection to act on. This covers `--popup` as well, the name
+introduced by `fzf` 0.71 for the same feature. `--no-tmux` is applied last and
+cannot be overridden, so asking for `--tmux` or `--popup` in
+`@fzf-links-fzf-display-options` has no effect either.
 
 It should be possible to ensure backward compatibility with minimum changes, but has to be tested. Please open an [issue](https://github.com/alberti42/tmux-fzf-links/issues) if you encounter issues of back compatibility.
 
