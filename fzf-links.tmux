@@ -110,7 +110,12 @@ fi
 
 # Prebuild a fully quoted command line (safe for /bin/sh in run-shell)
 python_q=$(printf "%q" "$python")
-PYENV="PYTHONPATH=$SCRIPT_DIR/tmux-fzf-links-python-pkg:$python_path"
+# PYTHONPATH must not end in a separator. An empty entry means the directory
+# the interpreter was launched from, which for `run-shell` is the working
+# directory of the tmux server, not the pane's. A stray `re.py` or `shlex.py`
+# sitting there would be imported in place of the stdlib module. Append the
+# user path only when there is one.
+PYENV="PYTHONPATH=$SCRIPT_DIR/tmux-fzf-links-python-pkg${python_path:+:$python_path}"
 
 # Arguments to the module, in order
 args=(
@@ -123,7 +128,11 @@ args=(
 )
 
 # Build the one-liner to hand to tmux (no arrays inside tmux; plain sh is fine)
-cmd=$(printf "%q " env "$PYENV" "$python" "${args[@]}")
+# PYTHONSAFEPATH stops Python from prepending the launch directory to
+# sys.path on its own account. Honoured from 3.11; older interpreters ignore
+# an unknown variable, so this is safe at the 3.10 floor. It does not filter
+# PYTHONPATH, which is why the empty entry above had to go as well.
+cmd=$(printf "%q " env PYTHONSAFEPATH=1 "$PYENV" "$python" "${args[@]}")
 cmd=${cmd% }   # strip trailing space in $cmd
 
 # Bind the key in Tmux to run the Python script
