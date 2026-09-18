@@ -1,8 +1,8 @@
 # 🚀 tmux-fzf-links
 
-[![Tests](https://github.com/alberti42/tmux-fzf-links/actions/workflows/tests.yml/badge.svg)](https://github.com/alberti42/tmux-fzf-links/actions/workflows/tests.yml)
 [![Made for tmux](https://img.shields.io/badge/made%20for-tmux-1BB91F?logo=tmux&logoColor=white)](https://github.com/tmux/tmux)
 [![TPM support](https://img.shields.io/badge/tpm--support-true-blue)](https://github.com/tmux-plugins/tpm)
+[![Tests](https://github.com/alberti42/tmux-fzf-links/actions/workflows/tests.yml/badge.svg)](https://github.com/alberti42/tmux-fzf-links/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
 
 **tmux-fzf-links** is a versatile tmux plugin that allows you to search for, copy to clipboard, and open links directly from your terminal using fuzzy search powered by [fzf](https://github.com/junegunn/fzf). The plugin supports both default and user-defined schemes, offering unmatched flexibility and integration with tmux popup windows.
