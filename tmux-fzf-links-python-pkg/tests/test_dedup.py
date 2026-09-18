@@ -32,6 +32,13 @@ def test_drops_plain_url_that_was_hyperlinked_to_itself() -> None:
     assert out[0][3].re is hyperlink_regex()
 
 
+def test_drops_parenthesized_plain_url_that_was_hyperlinked() -> None:
+    url = "https://example.com/guide"
+    hyperlink = osc8_item(url, url)
+    items = [hyperlink, plain_item(f"{url})")]
+    assert drop_hyperlinked_duplicates(items) == [hyperlink]
+
+
 def test_keeps_unrelated_match_sharing_a_hyperlink_label() -> None:
     # A filename that merely shares a hyperlink's visible text resolves to a
     # different target, so it must not be dropped.
