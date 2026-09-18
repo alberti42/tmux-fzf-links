@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="tmux_fzf_links",
-    version="1.0.0",
+    version="1.4.17",
     author="Andrea Alberti",
     author_email="a.alberti82@gmail.com",
     description="A tool for opening links in tmux with fuzzy search",
