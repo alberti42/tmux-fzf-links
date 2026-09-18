@@ -1,4 +1,4 @@
-### Release 1.4.17
+### Release 1.5.0
 
 This release adds support for OSC 8 hyperlinks, so that a token such as `#497` opens the URL the tool that printed it linked to. It also fixes four bugs, one of which made every invocation fail for users who set `--tmux` (or its newer name `--popup`) in their `fzf` configuration.
 
