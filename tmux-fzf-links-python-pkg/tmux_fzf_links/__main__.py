@@ -14,7 +14,7 @@ from typing import cast
 
 from .colors import colors
 from .configs import configs
-from .default_schemes import default_schemes
+from .default_schemes import default_schemes, trim_url
 from .errors_types import (
     CommandFailed,
     FailedChDir,
@@ -114,11 +114,19 @@ def drop_hyperlinked_duplicates(
     }
     if not osc8_targets:
         return items
-    return [
-        item
-        for item in items
-        if item[3].re is hyperlink_re or item[1].strip() not in osc8_targets
-    ]
+
+    deduplicated = []
+    for item in items:
+        if item[3].re is hyperlink_re:
+            deduplicated.append(item)
+            continue
+
+        target = item[1].strip()
+        if target.startswith(("http://", "https://")):
+            target = trim_url(target)
+        if target not in osc8_targets:
+            deduplicated.append(item)
+    return deduplicated
 
 
 def run(
