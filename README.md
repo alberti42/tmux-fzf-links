@@ -529,6 +529,15 @@ ip_scheme: SchemeEntry = {
 }
 ```
 
+If your scheme matches URLs as they appear in prose, trim them with `trim_url` before returning them. The regex pulls a trailing period, comma or closing parenthesis into the match, and `trim_url` strips it. It removes a closing parenthesis only when the match holds no opening partner for it, so a URL such as `https://en.wikipedia.org/wiki/Foo_(bar)` stays intact:
+
+```python
+from tmux_fzf_links.export import trim_url
+
+def url_post_handler(match: re.Match[str]) -> PostHandledMatch:
+    return {"url": trim_url(match.group(0))}
+```
+
 ##### Example: Handling Code Errors
 
 For an editor opener (`OpenerType.EDITOR`), the `post_handler` can return a dictionary with the `file` and `line` fields:

@@ -14,7 +14,7 @@ from typing import cast
 
 from .colors import colors
 from .configs import configs
-from .default_schemes import default_schemes, trim_url
+from .default_schemes import default_schemes
 from .errors_types import (
     CommandFailed,
     FailedChDir,
@@ -46,6 +46,7 @@ from .opener import (
     SchemeEntry,
     open_link,
 )
+from .schemes import trim_url
 
 
 def load_user_module(file_path: str) -> tuple[list[SchemeEntry], list[str]]:
@@ -115,12 +116,17 @@ def drop_hyperlinked_duplicates(
     if not osc8_targets:
         return items
 
-    deduplicated = []
+    deduplicated: list[tuple[PreHandledMatch, str, int, re.Match[str]]] = []
     for item in items:
         if item[3].re is hyperlink_re:
             deduplicated.append(item)
             continue
 
+        # Compare on the value the entry would open, not on its raw match. The
+        # url scheme opens trim_url(match), so a URL written in prose reaches
+        # here with the wrapping punctuation still attached and would otherwise
+        # never equal the bare target the hyperlink carries. The two must keep
+        # trimming with the same function.
         target = item[1].strip()
         if target.startswith(("http://", "https://")):
             target = trim_url(target)

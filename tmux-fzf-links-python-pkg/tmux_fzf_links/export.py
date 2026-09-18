@@ -6,7 +6,7 @@ from .colors import colors
 from .configs import configs
 from .hyperlinks import target_for, url_kind
 from .opener import OpenerType, PostHandledMatch, PreHandledMatch, SchemeEntry
-from .schemes import heuristic_find_file
+from .schemes import heuristic_find_file, trim_url
 
 __all__ = [
     "OpenerType",
@@ -18,4 +18,5 @@ __all__ = [
     "PostHandledMatch",
     "target_for",
     "url_kind",
+    "trim_url",
 ]

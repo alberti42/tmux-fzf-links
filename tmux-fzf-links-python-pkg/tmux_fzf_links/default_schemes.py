@@ -16,6 +16,7 @@ from .export import (
     colors,
     configs,
     heuristic_find_file,
+    trim_url,
 )
 from .hyperlinks import clean_text, hyperlink_regex, url_kind
 
@@ -144,23 +145,6 @@ code_error_scheme: SchemeEntry = {
 # <<< CODE ERROR SCHEME <<<
 
 # >>> URL SCHEME >>>
-
-_URL_TRAILING_PUNCTUATION = ".,;:!?'\""
-
-
-def trim_url(url: str) -> str:
-    opens = url.count("(")
-    closes = url.count(")")
-    while url:
-        last = url[-1]
-        if last in _URL_TRAILING_PUNCTUATION:
-            url = url[:-1]
-        elif last == ")" and opens < closes:
-            url = url[:-1]
-            closes -= 1
-        else:
-            break
-    return url
 
 
 def url_pre_handler(match: re.Match[str]) -> PreHandledMatch:
